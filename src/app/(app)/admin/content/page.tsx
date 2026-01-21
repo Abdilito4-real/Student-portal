@@ -72,17 +72,12 @@ const ImagePreview = ({ url, label }: { url: string | undefined | null; label: s
     setHasError(false);
   }, [url]);
 
-  const isValidUrl = useMemo(() => {
-    return typeof url === 'string' && url.startsWith('http');
-  }, [url]);
-
-  // If the URL isn't valid or has encountered an error, render the placeholder.
-  // This structure makes it clearer to the TypeScript compiler.
-  if (!isValidUrl || hasError) {
+  // If the URL isn't a valid string or has an error, render the placeholder.
+  if (!url || !url.startsWith('http') || hasError) {
     return <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted" />;
   }
 
-  // If we reach here, `url` is a valid string, and there's no error.
+  // If we reach here, 'url' is a valid string, so we can safely pass it to the Image component.
   return (
     <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
       <Image
