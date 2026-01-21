@@ -72,10 +72,8 @@ const ImagePreview = ({ url, label }: { url: string | undefined | null; label: s
     setHasError(false);
   }, [url]);
 
-  const isValidUrl = url && url.startsWith('http');
-
-  // If the URL isn't a valid string or has an error, render the placeholder.
-  if (!isValidUrl || hasError) {
+  // If the URL is invalid, has an error, or is null/undefined, render the placeholder.
+  if (hasError || !url || !url.startsWith('http')) {
     return <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted" />;
   }
 
