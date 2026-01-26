@@ -1,4 +1,3 @@
-
 import * as admin from 'firebase-admin';
 
 // This function ensures the admin app is initialized, but only once.
@@ -8,75 +7,52 @@ const initializeAdminApp = () => {
     return;
   }
 
-  // In a production environment (like Vercel)
-  if (process.env.NODE_ENV === 'production') {
-    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-    if (!serviceAccountString || !serviceAccountString.trim().startsWith('{')) {
-      console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_JSON env var is not set or is invalid on Vercel. Admin SDK cannot initialize.');
-      return;
-    }
-
-    try {
-      // Vercel can sometimes escape the JSON string.
-      // We first try to parse it directly.
-      const serviceAccount = JSON.parse(serviceAccountString);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log('Firebase Admin SDK initialized successfully for Vercel production.');
-    } catch (error: any) {
-         try {
-            // As a fallback, try to decode from Base64. This is a common workaround.
-            const decodedString = Buffer.from(serviceAccountString, 'base64').toString('utf-8');
-            const serviceAccount = JSON.parse(decodedString);
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-            });
-            console.log('Firebase Admin SDK initialized successfully from Base64 encoded key.');
-        } catch (finalError: any) {
-            console.error('CRITICAL: Failed to initialize Firebase Admin SDK. The FIREBASE_SERVICE_ACCOUNT_JSON environment variable is likely malformed or not set correctly in your Vercel project settings.');
-            console.error('Primary parsing error:', error.message);
-            console.error('Fallback parsing error:', finalError.message);
-        }
-    }
-  } else {
-    // In a local development environment
-    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-    if (!serviceAccountString || !serviceAccountString.trim().startsWith('{')) {
-        console.warn('FIREBASE_SERVICE_ACCOUNT_JSON not found or is a placeholder in .env file. Admin SDK not initialized for local dev. Homepage will use default content.');
-        return;
-    }
-    
-    try {
-        const serviceAccount = JSON.parse(serviceAccountString);
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        console.log('Firebase Admin SDK initialized successfully for local development from .env file.');
-    } catch (e: any) {
-        console.error('Error initializing Firebase Admin SDK for local development:', e.message);
-    }
+  // If the service account JSON isn't a valid JSON object string, do not initialize.
+  if (!serviceAccountString || !serviceAccountString.trim().startsWith('{')) {
+    // This is an expected state during local dev before .env is set up, or during a build on a new Vercel project.
+    // A console.warn is more appropriate than an error.
+    console.warn('Firebase Admin SDK not initialized: FIREBASE_SERVICE_ACCOUNT_JSON is not set or is invalid. Server-rendered pages will use default content.');
+    return;
+  }
+  
+  try {
+    const serviceAccount = JSON.parse(serviceAccountString);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (error: any) {
+    // This is a genuine error if the JSON is present but malformed.
+    console.error('CRITICAL: Failed to initialize Firebase Admin SDK. The FIREBASE_SERVICE_ACCOUNT_JSON environment variable is likely malformed.');
+    console.error('Parsing error:', error.message);
   }
 };
 
-export const getAdminDb = () => {
-  initializeAdminApp();
+// Attempt to initialize on module load.
+initializeAdminApp();
+
+/**
+ * Gets the initialized Firestore instance.
+ * @returns {admin.firestore.Firestore | null} The Firestore instance or null if initialization failed.
+ */
+export const getAdminDb = (): admin.firestore.Firestore | null => {
   if (admin.apps.length === 0) {
-    throw new Error('The default Firebase admin app does not exist. Initialization likely failed. Check server logs for details.');
+    return null;
   }
   return admin.firestore();
 };
 
-export const getAdminAuth = () => {
-  initializeAdminApp();
+/**
+ * Gets the initialized Auth instance.
+ * @returns {admin.auth.Auth | null} The Auth instance or null if initialization failed.
+ */
+export const getAdminAuth = (): admin.auth.Auth | null => {
   if (admin.apps.length === 0) {
-    throw new Error('The default Firebase admin app does not exist. Initialization likely failed. Check server logs for details.');
+    return null;
   }
   return admin.auth();
 };
 
 // For compatibility with other parts that might use `admin` for types.
 export { admin };
-

@@ -7,27 +7,34 @@ import { PublicHeader } from '@/components/layout/public-header';
 import { PublicFooter } from '@/components/layout/public-footer';
 import { defaultSiteContent } from '@/lib/default-content';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { doc, getDoc } from 'firebase/firestore';
 import type { SiteContent } from '@/lib/types';
 import { cache } from 'react';
 
 // Use React's cache function to fetch the data once per request.
 const getHomepageContent = cache(async (): Promise<SiteContent> => {
-  try {
-    const db = getAdminDb();
-    const contentRef = doc(db, 'site_content', 'homepage');
-    const contentSnap = await getDoc(contentRef);
+  const db = getAdminDb();
 
-    if (contentSnap.exists()) {
-      // Merge fetched data with defaults to ensure all properties are present
-      return { ...defaultSiteContent, ...contentSnap.data() } as SiteContent;
+  // If the admin SDK could not be initialized (e.g., missing secrets),
+  // we return the default content. This makes the build resilient.
+  if (!db) {
+    return defaultSiteContent;
+  }
+  
+  // If we have a DB connection, try to fetch the content.
+  try {
+    const contentRef = db.collection('site_content').doc('homepage');
+    const contentSnap = await contentRef.get();
+
+    if (contentSnap.exists) {
+      // Merge fetched data with defaults to ensure all fields are present
+      return { ...defaultSiteContent, ...(contentSnap.data() as SiteContent) };
     }
     // If document doesn't exist in Firestore, return the default content.
     return defaultSiteContent;
   } catch (error: any) {
-    // If Firebase Admin SDK fails to initialize (e.g., during build on Vercel without env vars),
-    // log the error and fall back to default content. This makes the build resilient.
-    console.error("Error fetching homepage content, falling back to default:", error.message);
+    // This catch block now only handles unexpected Firestore errors (e.g., network issues),
+    // not initialization failures, as those are handled by the `if (!db)` check.
+    console.error("Unexpected error fetching homepage content:", error.message);
     return defaultSiteContent;
   }
 });
