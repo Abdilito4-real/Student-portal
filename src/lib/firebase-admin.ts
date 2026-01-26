@@ -12,8 +12,8 @@ const initializeAdminApp = () => {
   if (process.env.NODE_ENV === 'production') {
     const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-    if (!serviceAccountString) {
-      console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_JSON env var is not set on Vercel. Admin SDK cannot initialize.');
+    if (!serviceAccountString || !serviceAccountString.trim().startsWith('{')) {
+      console.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_JSON env var is not set or is invalid on Vercel. Admin SDK cannot initialize.');
       return;
     }
 
@@ -44,8 +44,8 @@ const initializeAdminApp = () => {
     // In a local development environment
     const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-    if (!serviceAccountString) {
-        console.warn('FIREBASE_SERVICE_ACCOUNT_JSON not found in .env file. Admin SDK not initialized for local dev.');
+    if (!serviceAccountString || !serviceAccountString.trim().startsWith('{')) {
+        console.warn('FIREBASE_SERVICE_ACCOUNT_JSON not found or is a placeholder in .env file. Admin SDK not initialized for local dev. Homepage will use default content.');
         return;
     }
     
@@ -79,3 +79,4 @@ export const getAdminAuth = () => {
 
 // For compatibility with other parts that might use `admin` for types.
 export { admin };
+
