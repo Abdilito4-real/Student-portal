@@ -2,32 +2,39 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore'
 
-let app: FirebaseApp;
-
-if (!getApps().length) {
-  try {
-    // Attempt to initialize via Firebase App Hosting environment variables
-    app = initializeApp();
-  } catch (e) {
-    // Only warn in production because it's normal to use the firebaseConfig to initialize
-    // during development
-    if (process.env.NODE_ENV === "production") {
-      console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-    }
-    app = initializeApp(firebaseConfig);
+// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+export function initializeFirebase() {
+  // Explicitly check for the API key to provide a better error message.
+  if (!firebaseConfig.apiKey) {
+    // This is the most common reason for the "app/no-options" error.
+    // It means the environment variables are not being loaded correctly.
+    throw new Error(
+      'Firebase config is missing the API key. Please make sure your NEXT_PUBLIC_FIREBASE_API_KEY environment variable is set correctly. If you are running locally, check your .env file.'
+    );
   }
-} else {
-  app = getApp();
+  
+  // If an app is already initialized, return its SDKs.
+  if (getApps().length) {
+    return getSdks(getApp());
+  }
+
+  // Otherwise, initialize a new app with the provided config.
+  // This is the standard pattern for Next.js apps on hosting platforms
+  // other than Firebase Hosting (like Vercel, Netlify, etc.).
+  const firebaseApp = initializeApp(firebaseConfig);
+  return getSdks(firebaseApp);
 }
 
-const firebaseApp = app;
-const auth = getAuth(firebaseApp);
-const firestore = getFirestore(firebaseApp);
-
-export { firebaseApp, auth, firestore };
+export function getSdks(firebaseApp: FirebaseApp) {
+  return {
+    firebaseApp,
+    auth: getAuth(firebaseApp),
+    firestore: getFirestore(firebaseApp),
+  };
+}
 
 export * from './provider';
 export * from './client-provider';
