@@ -12,6 +12,7 @@ import { cache } from 'react';
 
 /**
  * Fetches homepage content from Firestore with a fallback for build-time safety.
+ * Filters out empty strings from the database to ensure default values persist.
  */
 const getHomepageContent = cache(async (): Promise<SiteContent> => {
   try {
@@ -26,7 +27,12 @@ const getHomepageContent = cache(async (): Promise<SiteContent> => {
     const contentSnap = await contentRef.get();
 
     if (contentSnap.exists) {
-      return { ...defaultSiteContent, ...(contentSnap.data() as SiteContent) };
+      const dbData = contentSnap.data() || {};
+      // Filter out empty strings so they don't overwrite the robust defaults
+      const cleanDbData = Object.fromEntries(
+        Object.entries(dbData).filter(([_, v]) => v !== "" && v !== null && v !== undefined)
+      );
+      return { ...defaultSiteContent, ...cleanDbData };
     }
     
     return defaultSiteContent;
@@ -47,7 +53,7 @@ export default async function HomePage() {
         {/* Hero Section */}
         <section className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center text-center text-white">
           <Image
-            src={content.heroImageUrl}
+            src={content.heroImageUrl || defaultSiteContent.heroImageUrl}
             alt="University campus"
             fill
             className="object-cover"
@@ -90,7 +96,7 @@ export default async function HomePage() {
               </div>
               <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
                  <Image
-                    src={content.missionImageUrl}
+                    src={content.missionImageUrl || defaultSiteContent.missionImageUrl}
                     alt="Students collaborating"
                     fill
                     className="object-cover"
@@ -136,7 +142,7 @@ export default async function HomePage() {
                 <div className="grid gap-10 md:grid-cols-2 md:gap-16 items-center">
                     <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
                         <Image
-                            src={content.academicsImageUrl}
+                            src={content.academicsImageUrl || defaultSiteContent.academicsImageUrl}
                             alt="Library with students"
                             fill
                             className="object-cover"
@@ -168,7 +174,7 @@ export default async function HomePage() {
               </div>
               <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
                  <Image
-                    src={content.communityImageUrl}
+                    src={content.communityImageUrl || defaultSiteContent.communityImageUrl}
                     alt="Group of students laughing"
                     fill
                     className="object-cover"
