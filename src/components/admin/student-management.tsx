@@ -1,13 +1,6 @@
-// FULLY CORRECTED VERSION - UI Freezing Fixes Applied
-// Key fixes for UI freezing:
-// 1. Proper dialog state management with delayed resets (now explicit unmount)
-// 2. Optimized query memoization (already in place)
-// 3. Added form cleanup on unmount (now explicitly in dialog close for each form)
-// 4. Fixed onOpenChange handlers (simplified by conditional render)
-
 'use client';
 
-import { useState, useMemo, useEffect, Fragment, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { useCollection, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -134,7 +127,7 @@ function StudentForm({
     setFormError(null);
   
     try {
-      if (student) { // UPDATE student
+      if (student) {
         const studentDataPayload = {
             firstName: values.firstName,
             lastName: values.lastName,
@@ -152,7 +145,7 @@ function StudentForm({
         });
         setOpen(false);
   
-      } else { // CREATE new student
+      } else {
         if (!values.password) {
           form.setError('password', { message: 'Password is required for new students.'});
           setIsSubmitting(false);
@@ -167,7 +160,6 @@ function StudentForm({
         });
   
         if (authResult.error || !authResult.uid) {
-          // Instead of throwing a generic Error, we handle the known error patterns
           let errorMessage = authResult.error || "Failed to create user account.";
           if (errorMessage.includes('auth/email-already-exists')) {
             errorMessage = "This email address is already in use by another account.";
@@ -192,13 +184,9 @@ function StudentForm({
         try {
           await setDoc(doc(firestore, 'students', targetUid), studentData);
         } catch (firestoreError) {
-          console.error('Firestore Create error:', firestoreError);
-          // If Firestore fails, try to delete the Auth user
           if (authResult.uid) {
-            console.log('Firestore write failed, attempting to clean up created Auth user:', authResult.uid);
             await deleteStudentFlow({ uid: authResult.uid });
           }
-          // Re-throw the original firestore error to be caught by the outer catch
           throw firestoreError;
         }
         
@@ -221,14 +209,14 @@ function StudentForm({
         
         let permissionError;
         const studentValues = form.getValues();
-        if (student) { // Update failed
+        if (student) {
             const studentRef = doc(firestore, 'students', student.id);
             permissionError = new FirestorePermissionError({
                 path: studentRef.path,
                 operation: 'update',
                 requestResourceData: studentValues,
             });
-        } else { // Create failed
+        } else {
             permissionError = new FirestorePermissionError({
                 path: `students/{new-uid}`,
                 operation: 'create',
@@ -328,8 +316,6 @@ function ClassResultForm({
     const firestore = useFirestore();
     const [selectedSubject, setSelectedSubject] = useState<string>(studentClass.subjects?.[0] || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    // State to hold all grade entries for the current session
     const [sessionResults, setSessionResults] = useState<SessionResultsState>({});
 
     const form = useForm<z.infer<typeof classResultsSchema>>({
@@ -354,7 +340,7 @@ function ClassResultForm({
     const studentResultsWatch = form.watch('studentResults');
     
     const hasAnyGradeBeenEntered = useMemo(() => {
-        if (studentResultsWatch.some(r => !!r.grade)) return true; // Check current form
+        if (studentResultsWatch.some(r => !!r.grade)) return true;
         for (const subject in sessionResults) {
             if (sessionResults[subject]?.some(r => !!r.grade)) return true;
         }
@@ -363,7 +349,6 @@ function ClassResultForm({
     
     const handleSubjectChange = useCallback((newSubject: string) => {
         const currentGrades = form.getValues('studentResults');
-        
         const newSessionResults = {
             ...sessionResults,
             [selectedSubject]: currentGrades,
@@ -392,48 +377,34 @@ function ClassResultForm({
                     if (!studentResult.grade) continue;
 
                     const resultDocRef = doc(collection(firestore, `users/${studentResult.studentId}/academicResults`));
-                    
-                    const resultData: Partial<AcademicResult> & { studentId: string; term: string; year: number; className: string; grade: string; createdAt: any; } = {
+                    const resultData = {
                         studentId: studentResult.studentId,
                         term: values.term,
                         year: values.year,
                         className: subject,
                         grade: studentResult.grade,
                         createdAt: serverTimestamp(),
+                        position: studentResult.position || '',
+                        comments: values.comments || '',
                     };
-
-                    if (studentResult.position) {
-                        resultData.position = studentResult.position;
-                    }
-                    if (values.comments) {
-                        resultData.comments = values.comments;
-                    }
                     
                     const finalData = { ...resultData, id: resultDocRef.id };
-
                     batch.set(resultDocRef, finalData);
-                    
                     const globalResultRef = doc(firestore, 'academicResults', resultDocRef.id);
                     batch.set(globalResultRef, finalData);
                 }
             }
 
             await batch.commit();
-
-            toast({ title: 'Class Results Uploaded', description: `Results for all edited subjects have been uploaded.` });
+            toast({ title: 'Class Results Uploaded' });
             setOpen(false);
         } catch (error: any) {
             console.error("Batch write error:", error);
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: `users/{userId}/academicResults`,
                 operation: 'create',
-                requestResourceData: { note: 'Class-wide batch write operation failed.' }
              }));
-            toast({
-                title: 'Error',
-                description: 'Failed to upload results. Check permissions.',
-                variant: 'destructive'
-            });
+            toast({ title: 'Error', description: 'Failed to upload results.', variant: 'destructive' });
         } finally {
             setIsSubmitting(false);
         }
@@ -444,7 +415,7 @@ function ClassResultForm({
             <DialogHeader>
                 <DialogTitle>Upload Class Results for {studentClass.name}</DialogTitle>
                 <DialogDescription>
-                    Enter grades for a subject. Switch subjects to enter more grades. Your progress is saved per session.
+                    Enter grades for a subject. Progress is saved per session.
                 </DialogDescription>
             </DialogHeader>
             <div className="max-h-[70vh] pr-2 -mr-6 pl-6">
@@ -453,7 +424,7 @@ function ClassResultForm({
                     <div className="px-1">
                       <div className="grid grid-cols-2 gap-4">
                           <FormField control={form.control} name="term" render={({ field }) => (
-                              <FormItem><FormLabel>Term</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={hasAnyGradeBeenEntered}><FormControl><SelectTrigger><SelectValue placeholder="Select term" /></SelectTrigger></FormControl><SelectContent>
+                              <FormItem><FormLabel>Term</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={hasAnyGradeBeenEntered}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>
                                   {['1st', '2nd', '3rd'].map(t => <SelectItem key={t} value={t}>{t} Term</SelectItem>)}
                               </SelectContent></Select><FormMessage /></FormItem>
                           )} />
@@ -470,7 +441,7 @@ function ClassResultForm({
                                     <FormLabel>Admin Comments (Optional)</FormLabel>
                                     <FormControl>
                                         <Textarea
-                                            placeholder="This comment will be applied to all students for this subject."
+                                            placeholder="Applied to all students for this subject."
                                             className="resize-none"
                                             {...field}
                                         />
@@ -482,7 +453,6 @@ function ClassResultForm({
                       </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 flex-grow overflow-y-auto">
-                        {/* Left column: Subject list */}
                         <div className="md:col-span-1 space-y-1 pr-4 border-r">
                             <h4 className="font-medium text-sm mb-2 sticky top-0 bg-content py-2">Subjects</h4>
                             <div className="h-full overflow-y-auto">
@@ -500,7 +470,6 @@ function ClassResultForm({
                             </div>
                         </div>
 
-                        {/* Right column: Grade entry table */}
                         <div className="md:col-span-2 space-y-4">
                             <h4 className="font-medium text-sm sticky top-0 bg-content py-2">Grades & Positions for {selectedSubject}</h4>
                             <div className="rounded-md border h-full overflow-y-auto">
@@ -509,7 +478,7 @@ function ClassResultForm({
                                     <TableRow>
                                         <TableHead className="w-1/3">Student</TableHead>
                                         <TableHead>Grade</TableHead>
-                                        <TableHead>Overall Position</TableHead>
+                                        <TableHead>Position</TableHead>
                                     </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -517,16 +486,6 @@ function ClassResultForm({
                                         const student = students.find(s => s.id === field.studentId);
                                         if (!student) return null;
                                         
-                                        const allSubjects = studentClass.subjects || [];
-                                        const allEnteredResults = { ...sessionResults, [selectedSubject]: studentResultsWatch };
-
-                                        const areAllGradesEntered = allSubjects.every(subject => {
-                                            const subjectEntries = allEnteredResults[subject];
-                                            if (!subjectEntries) return false;
-                                            const studentEntry = subjectEntries.find(r => r.studentId === student.id);
-                                            return studentEntry && !!studentEntry.grade;
-                                        });
-
                                         return (
                                             <TableRow key={field.id}>
                                                 <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
@@ -539,15 +498,11 @@ function ClassResultForm({
                                                                 <Select onValueChange={field.onChange} value={field.value || ''}>
                                                                     <FormControl>
                                                                         <SelectTrigger className="w-28">
-                                                                            <SelectValue placeholder="Select Grade" />
+                                                                            <SelectValue placeholder="Grade" />
                                                                         </SelectTrigger>
                                                                     </FormControl>
                                                                     <SelectContent>
-                                                                        <SelectItem value="A">A</SelectItem>
-                                                                        <SelectItem value="B">B</SelectItem>
-                                                                        <SelectItem value="C">C</SelectItem>
-                                                                        <SelectItem value="D">D</SelectItem>
-                                                                        <SelectItem value="F">F</SelectItem>
+                                                                        {['A', 'B', 'C', 'D', 'F'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                                                                     </SelectContent>
                                                                 </Select>
                                                                 <FormMessage />
@@ -566,8 +521,6 @@ function ClassResultForm({
                                                                         {...field}
                                                                         placeholder="N/A"
                                                                         value={field.value || ''}
-                                                                        disabled={!areAllGradesEntered}
-                                                                        title={!areAllGradesEntered ? "Enter grades for all subjects to enable." : "Student's overall position"}
                                                                     />
                                                                 </FormControl>
                                                                 <FormMessage />
@@ -581,7 +534,6 @@ function ClassResultForm({
                                     </TableBody>
                                 </Table>
                             </div>
-                            <FormMessage>{form.formState.errors.studentResults?.root?.message || (form.formState.isSubmitted && form.formState.errors.studentResults ? "Please assign a grade to all students." : "")}</FormMessage>
                         </div>
                     </div>
                   </form>
@@ -626,7 +578,7 @@ function EditResultForm({
   async function onSubmit(values: z.infer<typeof singleResultSchema>) {
     setIsSubmitting(true);
     try {
-      const resultData: Partial<AcademicResult> = {
+      const resultData = {
         term: values.term,
         year: values.year,
         className: values.className,
@@ -641,18 +593,16 @@ function EditResultForm({
       const batch = writeBatch(firestore);
       batch.update(userResultRef, resultData);
       batch.update(globalResultRef, resultData);
-      
       await batch.commit();
 
-      toast({ title: 'Result Updated', description: 'The academic result has been successfully updated.' });
+      toast({ title: 'Result Updated' });
       setOpen(false);
     } catch (e: any) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: `users/${result.studentId}/academicResults/${result.id}`,
             operation: 'update',
-            requestResourceData: values,
         }));
-      toast({ title: 'Update Failed', description: 'Could not update the result. Check permissions.', variant: 'destructive' });
+      toast({ title: 'Update Failed', variant: 'destructive' });
     } finally {
         setIsSubmitting(false);
     }
@@ -668,7 +618,7 @@ function EditResultForm({
           <form onSubmit={form.handleSubmit(onSubmit)} id="edit-result-form" className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="term" render={({ field }) => (
-                  <FormItem><FormLabel>Term</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select term" /></SelectTrigger></FormControl><SelectContent>
+                  <FormItem><FormLabel>Term</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>
                       {['1st', '2nd', '3rd'].map(t => <SelectItem key={t} value={t}>{t} Term</SelectItem>)}
                   </SelectContent></Select><FormMessage /></FormItem>
               )} />
@@ -698,7 +648,6 @@ function EditResultForm({
       <DialogFooter className="pt-4">
         <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancel</Button>
         <Button type="submit" form="edit-result-form" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
         </Button>
       </DialogFooter>
@@ -710,15 +659,18 @@ function EditResultForm({
 
 // ===================== MANAGE RESULTS DIALOG =====================
 
-function ManageResultsDialog({ student, setOpen }: { student: Student; setOpen: (open: boolean) => void }) {
+function ManageResultsDialog({ 
+    student, 
+    setOpen,
+    onEditResult,
+    onDeleteResult
+}: { 
+    student: Student; 
+    setOpen: (open: boolean) => void;
+    onEditResult: (result: AcademicResult) => void;
+    onDeleteResult: (result: AcademicResult) => void;
+}) {
   const firestore = useFirestore();
-  const { toast } = useToast();
-
-  const [resultToEdit, setResultToEdit] = useState<AcademicResult | null>(null);
-  const [isEditFormOpen, setEditFormOpen] = useState(false);
-  const [deletingResultId, setDeletingResultId] = useState<string | null>(null);
-
-
   const resultsQuery = useMemoFirebase(() =>
     query(collection(firestore, `users/${student.id}/academicResults`)),
     [firestore, student.id]
@@ -729,9 +681,7 @@ function ManageResultsDialog({ student, setOpen }: { student: Student; setOpen: 
     if (!results) return {};
     return results.reduce((acc, result) => {
       const key = `${result.year} - ${result.term} Term`;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
+      if (!acc[key]) acc[key] = [];
       acc[key].push(result);
       return acc;
     }, {} as Record<string, AcademicResult[]>);
@@ -739,48 +689,17 @@ function ManageResultsDialog({ student, setOpen }: { student: Student; setOpen: 
 
   const sortedGroupKeys = Object.keys(groupedResults).sort((a, b) => b.localeCompare(a));
 
-
-  const handleEdit = (result: AcademicResult) => {
-    setResultToEdit(result);
-    setEditFormOpen(true);
-  };
-
-  const handleDelete = async (result: AcademicResult) => {
-    if (confirm(`Are you sure you want to delete the result for ${result.className}?`)) {
-      setDeletingResultId(result.id);
-      try {
-        const userResultRef = doc(firestore, `users/${student.id}/academicResults`, result.id);
-        const globalResultRef = doc(firestore, 'academicResults', result.id);
-        
-        const batch = writeBatch(firestore);
-        batch.delete(userResultRef);
-        batch.delete(globalResultRef);
-        
-        await batch.commit();
-        toast({ title: 'Result Deleted' });
-      } catch (e: any) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `users/${student.id}/academicResults/${result.id}`,
-            operation: 'delete',
-        }));
-        toast({ title: 'Delete Failed', description: 'Could not delete result. Check permissions.', variant: 'destructive' });
-      } finally {
-        setDeletingResultId(null);
-      }
-    }
-  };
-
   return (
     <>
       <DialogHeader>
         <DialogTitle>Manage Results for {student.firstName}</DialogTitle>
-        <DialogDescription>View, edit, or delete academic results for this student.</DialogDescription>
+        <DialogDescription>View, edit, or delete academic results.</DialogDescription>
       </DialogHeader>
       <div className="mt-4 max-h-[60vh] overflow-y-auto pr-2 space-y-6">
         {isLoading ? (
           <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : sortedGroupKeys.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No results found for this student.</p>
+          <p className="text-center text-muted-foreground py-8">No results found.</p>
         ) : (
           sortedGroupKeys.map(groupKey => (
             <div key={groupKey}>
@@ -790,7 +709,6 @@ function ManageResultsDialog({ student, setOpen }: { student: Student; setOpen: 
                   <TableRow>
                     <TableHead>Subject</TableHead>
                     <TableHead>Grade</TableHead>
-                    <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -799,12 +717,9 @@ function ManageResultsDialog({ student, setOpen }: { student: Student; setOpen: 
                     <TableRow key={res.id}>
                       <TableCell>{res.className}</TableCell>
                       <TableCell><Badge variant="secondary">{res.grade}</Badge></TableCell>
-                      <TableCell>{res.createdAt ? format(res.createdAt.toDate(), 'P') : 'N/A'}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(res)} disabled={!!deletingResultId}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(res)} disabled={!!deletingResultId}>
-                            {deletingResultId === res.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onEditResult(res)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDeleteResult(res)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -817,13 +732,6 @@ function ManageResultsDialog({ student, setOpen }: { student: Student; setOpen: 
        <DialogFooter className="pt-4">
         <Button type="button" variant="outline" onClick={() => setOpen(false)}>Close</Button>
       </DialogFooter>
-
-      {/* Edit Result Dialog */}
-      <Dialog open={isEditFormOpen} onOpenChange={setEditFormOpen}>
-        <DialogContent>
-          {resultToEdit && <EditResultForm result={resultToEdit} setOpen={setEditFormOpen} />}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
@@ -847,18 +755,13 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
     
     const watchedAmount = form.watch("amount");
     const watchedAmountPaid = form.watch("amountPaid");
-
     const balance = (watchedAmount || 0) - (watchedAmountPaid || 0);
     
     let status: 'Paid' | 'Pending' | 'Partial' = 'Pending';
     if ((watchedAmount || 0) > 0) {
-        if (balance <= 0) {
-            status = 'Paid';
-        } else if ((watchedAmountPaid || 0) > 0) {
-            status = 'Partial';
-        }
+        if (balance <= 0) status = 'Paid';
+        else if ((watchedAmountPaid || 0) > 0) status = 'Partial';
     }
-
 
     useEffect(() => {
         if (currentFee) {
@@ -869,15 +772,6 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
                 term: currentFee.term,
                 session: currentFee.session,
             });
-        } else {
-            const currentYear = new Date().getFullYear();
-            form.reset({
-                amount: 1200,
-                amountPaid: 0,
-                dueDate: new Date().toISOString().split('T')[0],
-                term: '1st',
-                session: `${currentYear}/${currentYear + 1}`
-            });
         }
     }, [currentFee, form]);
 
@@ -885,70 +779,32 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
     async function onSubmit(values: z.infer<typeof feeSchema>) {
       setIsSubmitting(true);
       try {
-        const totalAmount = values.amount;
-        const amountPaid = values.amountPaid;
-        const balanceRemaining = totalAmount - amountPaid;
-
-        let calculatedStatus: 'Paid' | 'Pending' | 'Partial' = 'Pending';
-        if (balanceRemaining <= 0) {
-            calculatedStatus = 'Paid';
-        } else if (amountPaid > 0) {
-            calculatedStatus = 'Partial';
-        }
-
         const feeDocRef = currentFee ? 
           doc(firestore, `users/${student.id}/fees`, currentFee.id) : 
           doc(collection(firestore, `users/${student.id}/fees`));
         
-        const feeData: Partial<FeeRecord> = { 
+        const feeData = { 
           id: feeDocRef.id, 
           studentId: student.id, 
           term: values.term,
           session: values.session,
-          amount: totalAmount,
-          amountPaid: amountPaid,
-          balanceRemaining: balanceRemaining,
-          status: calculatedStatus,
+          amount: values.amount,
+          amountPaid: values.amountPaid,
+          balanceRemaining: values.amount - values.amountPaid,
+          status: status,
           dueDate: new Date(values.dueDate).toISOString(),
           createdAt: serverTimestamp()
         };
 
-        if (calculatedStatus === 'Paid' && (!currentFee || currentFee.status !== 'Paid')) {
-            feeData.paidDate = new Date().toISOString();
-        }
+        const batch = writeBatch(firestore);
+        batch.set(feeDocRef, feeData, { merge: true });
+        batch.set(doc(firestore, 'fees', feeDocRef.id), feeData, { merge: true });
+        await batch.commit();
         
-        await setDoc(feeDocRef, feeData, { merge: true }).catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: feeDocRef.path,
-                operation: 'write',
-                requestResourceData: feeData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
-        });
-        
-        const globalFeeRef = doc(firestore, 'fees', feeDocRef.id);
-        await setDoc(globalFeeRef, feeData, { merge: true }).catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: globalFeeRef.path,
-                operation: 'write',
-                requestResourceData: feeData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        });
-        
-        toast({ 
-          title: 'Fee Status Updated', 
-          description: `Fee status for ${student.firstName} has been updated.` 
-        });
+        toast({ title: 'Fee Status Updated' });
         setOpen(false);
       } catch (error) {
-        console.error("Fee update error:", error);
-        toast({
-          title: 'Error',
-          description: 'Failed to update fee status. Check permissions.',
-          variant: 'destructive'
-        });
+        toast({ title: 'Error', variant: 'destructive' });
       } finally {
         setIsSubmitting(false);
       }
@@ -957,88 +813,41 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
     return (
       <>
         <DialogHeader>
-          <DialogTitle>Update Fee Status for {student.firstName}</DialogTitle>
-          <DialogDescription>
-            Update the fee amount, amount paid, and due date for this student. The status will be calculated automatically.
-          </DialogDescription>
+          <DialogTitle>Update Fees: {student.firstName}</DialogTitle>
+          <DialogDescription>Amount paid will automatically update status.</DialogDescription>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto pr-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} id="fee-form" className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                  <FormField control={form.control} name="term" render={({ field }) => (
-                    <FormItem><FormLabel>Term</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select term" /></SelectTrigger></FormControl><SelectContent>
+                    <FormItem><FormLabel>Term</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>
                         {['1st', '2nd', '3rd'].map(t => <SelectItem key={t} value={t}>{t} Term</SelectItem>)}
                     </SelectContent></Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="session" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Session</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., 2024/2025" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
+                    <FormItem><FormLabel>Session</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
-
               <FormField control={form.control} name="amount" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Total Fee Amount</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem><FormLabel>Total Amount</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
                 )} />
-
               <FormField control={form.control} name="amountPaid" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount Paid</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem><FormLabel>Amount Paid</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
                 )} />
-
               <FormField control={form.control} name="dueDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Due Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem><FormLabel>Due Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                
-                <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-                    <h4 className="font-medium text-sm">Calculated Status</h4>
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Balance Remaining:</span>
-                        <span className="font-bold">₦{balance.toLocaleString()}</span>
-                    </div>
-                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Status:</span>
-                        <Badge variant={status === 'Paid' ? 'success' : status === 'Partial' ? 'warning' : 'destructive'}>{status}</Badge>
-                    </div>
+                <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Status: <Badge variant={status === 'Paid' ? 'success' : status === 'Partial' ? 'warning' : 'destructive'}>{status}</Badge></span>
+                    <span className="font-bold">Bal: ₦{balance.toLocaleString()}</span>
                 </div>
             </form>
           </Form>
         </div>
         <DialogFooter className="pt-4">
-            <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-            >
-                Cancel
-            </Button>
-            <Button type="submit" form="fee-form" disabled={isSubmitting || isLoading}>
-                {(isSubmitting || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Update Status
-            </Button>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" form="fee-form" disabled={isSubmitting}>Update Status</Button>
         </DialogFooter>
       </>
     );
@@ -1063,34 +872,18 @@ function BulkResultUploadForm({ students, studentClass, setOpen }: { students: S
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     setFileName(file.name);
     setIsProcessing(true);
     setError(null);
-    setParsedData([]);
-
     try {
-      // Dynamically import xlsx
       const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data) as WorkBook;
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet);
-      
-      if (json.length === 0) {
-          throw new Error("The uploaded file is empty or in an incorrect format.");
-      }
-
-      const firstRow: any = json[0];
-      if (!firstRow.hasOwnProperty('studentId')) {
-          throw new Error(`The file is missing the required 'studentId' column.`);
-      }
-
+      const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+      if (json.length === 0 || !json[0].hasOwnProperty('studentId')) throw new Error("Invalid format.");
       setParsedData(json);
-      toast({ title: "File Processed", description: `${json.length} rows ready for upload.` });
     } catch (err: any) {
-      setError(err.message || "Failed to read or parse the file.");
+      setError(err.message);
       setFileName(null);
     } finally {
       setIsProcessing(false);
@@ -1098,44 +891,17 @@ function BulkResultUploadForm({ students, studentClass, setOpen }: { students: S
   };
 
   const onSubmit = async (values: z.infer<typeof bulkUploadSchema>) => {
-    if (parsedData.length === 0) {
-        setError("No data to upload. Please select a valid file.");
-        return;
-    }
-
     setIsProcessing(true);
-    setError(null);
-
     const batch = writeBatch(firestore);
-    const studentIdsInClass = new Set(students.map(s => s.id));
     const subjectsInClass = studentClass?.subjects || [];
-    let processedCount = 0;
-    
-    if (subjectsInClass.length === 0) {
-        setError("This class has no subjects configured. Please edit the class to add subjects first.");
-        setIsProcessing(false);
-        return;
-    }
-    
     try {
         for (const row of parsedData) {
             const { studentId, position, comments, ...subjectGrades } = row as any;
-            
-            // Validation
-            if (!studentId || !studentIdsInClass.has(studentId.toString())) {
-                console.warn(`Skipping row: Student ID "${studentId}" not found in this class.`);
-                continue;
-            }
-            
-            let studentHasGrades = false;
             for (const subjectName of subjectsInClass) {
                 const grade = subjectGrades[subjectName];
-                
-                // If a grade exists for this subject column
                 if (grade && ['A', 'B', 'C', 'D', 'F'].includes(grade.toString().toUpperCase())) {
                     const resultDocRef = doc(collection(firestore, `users/${studentId}/academicResults`));
-                    
-                    const resultData: Partial<AcademicResult> & { id: string, studentId: string; term: string; year: number; className: string; grade: string; createdAt: any; } = {
+                    const finalData = {
                         id: resultDocRef.id,
                         studentId: studentId.toString(),
                         term: values.term,
@@ -1143,33 +909,19 @@ function BulkResultUploadForm({ students, studentClass, setOpen }: { students: S
                         className: subjectName,
                         grade: grade.toString().toUpperCase(),
                         createdAt: serverTimestamp(),
+                        position: position?.toString() || '',
+                        comments: comments?.toString() || '',
                     };
-                    if (position) resultData.position = position.toString();
-                    if (comments) resultData.comments = comments.toString();
-
-                    batch.set(resultDocRef, resultData);
-                    const globalResultRef = doc(firestore, 'academicResults', resultDocRef.id);
-                    batch.set(globalResultRef, resultData);
-                    studentHasGrades = true;
+                    batch.set(resultDocRef, finalData);
+                    batch.set(doc(firestore, 'academicResults', resultDocRef.id), finalData);
                 }
             }
-            if (studentHasGrades) {
-              processedCount++;
-            }
         }
-
-        if (processedCount === 0) {
-          throw new Error("No valid student rows with grades were found to upload. Please check student IDs and ensure grades are entered.");
-        }
-
         await batch.commit();
-        toast({ title: "Bulk Upload Successful", description: `${processedCount} students' results have been saved.` });
+        toast({ title: "Upload Successful" });
         setOpen(false);
-
     } catch (e: any) {
-        console.error("Bulk upload error:", e);
-        setError(e.message || "An error occurred during the bulk upload.");
-        toast({ title: "Upload Failed", description: e.message, variant: "destructive" });
+        toast({ title: "Upload Failed", variant: "destructive" });
     } finally {
         setIsProcessing(false);
     }
@@ -1179,24 +931,8 @@ function BulkResultUploadForm({ students, studentClass, setOpen }: { students: S
     <>
       <DialogHeader>
         <DialogTitle>Bulk Upload Results</DialogTitle>
-        <DialogDescription>
-            Upload results for multiple students and subjects using an Excel or CSV file.
-        </DialogDescription>
       </DialogHeader>
-      <div className="max-h-[70vh] overflow-y-auto pr-6 -mr-6 pl-6 space-y-4 pt-4">
-        <Alert>
-            <AlertTitle>Instructions</AlertTitle>
-            <AlertDescription>
-                <ol className="list-decimal list-inside space-y-2 mt-2">
-                    <li>Click <strong>Download List</strong> to get a CSV template.</li>
-                    <li>The file will have one row per student. The columns will be <strong>`studentId`</strong> (the primary identifier), student name/email, followed by a column for each subject in this class (e.g., <strong>`Mathematics`</strong>, <strong>`English`</strong>).</li>
-                    <li>For each student, enter their grade under the corresponding subject column.</li>
-                    <li>You can also fill in the optional <strong>`position`</strong> and <strong>`comments`</strong> columns for each student row.</li>
-                    <li>Save your file and upload it below.</li>
-                </ol>
-            </AlertDescription>
-        </Alert>
-
+      <div className="space-y-4 pt-4">
         <Form {...form}>
           <form id="bulk-upload-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1209,45 +945,19 @@ function BulkResultUploadForm({ students, studentClass, setOpen }: { students: S
                       <FormItem><FormLabel>Year</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
               </div>
-              
               <FormItem>
-                <FormLabel>Upload File</FormLabel>
+                <FormLabel>File</FormLabel>
                 <div className="flex items-center gap-4">
-                    <FormControl>
-                        <Input
-                            id="bulk-file-upload"
-                            type="file"
-                            accept=".xlsx, .xls, .csv"
-                            onChange={handleFileChange}
-                            className="hidden"
-                        />
-                    </FormControl>
-                    <label
-                        htmlFor="bulk-file-upload"
-                        className={cn(
-                            buttonVariants({ variant: 'outline' }),
-                            "cursor-pointer"
-                        )}
-                    >
-                        <FileUp className="mr-2 h-4 w-4" />
-                        <span>{fileName ? 'Change File' : 'Choose File'}</span>
-                    </label>
-                    {fileName && !error && (
-                        <span className="text-sm text-muted-foreground">{fileName}</span>
-                    )}
+                    <Input id="bulk-file-upload" type="file" onChange={handleFileChange} />
                 </div>
-                {error && <FormMessage className="mt-2">{error}</FormMessage>}
+                {error && <FormMessage>{error}</FormMessage>}
             </FormItem>
           </form>
         </Form>
       </div>
-
       <DialogFooter className="pt-4">
         <Button variant="ghost" onClick={() => setOpen(false)} disabled={isProcessing}>Cancel</Button>
-        <Button type="submit" form="bulk-upload-form" disabled={isProcessing || parsedData.length === 0}>
-            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Upload {parsedData.length > 0 ? `${parsedData.length} Records` : 'Records'}
-        </Button>
+        <Button type="submit" form="bulk-upload-form" disabled={isProcessing || parsedData.length === 0}>Upload</Button>
       </DialogFooter>
     </>
   );
@@ -1259,180 +969,80 @@ export default function StudentManagement({ classId }: { classId: string }) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [filter, setFilter] = useState('');
   
+  const [filter, setFilter] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [resultToDelete, setResultToDelete] = useState<{ studentId: string, result: AcademicResult } | null>(null);
+  const [resultToEdit, setResultToEdit] = useState<AcademicResult | null>(null);
+
   const [isStudentFormOpen, setStudentFormOpen] = useState(false);
   const [isClassResultFormOpen, setClassResultFormOpen] = useState(false);
   const [isFeeFormOpen, setFeeFormOpen] = useState(false);
   const [isManageResultsOpen, setManageResultsOpen] = useState(false);
+  const [isEditResultOpen, setEditResultOpen] = useState(false);
   const [isBulkUploadOpen, setBulkUploadOpen] = useState(false);
-  const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-
-  const studentsQuery = useMemoFirebase(() => user ? query(
-    collection(firestore, 'students'), 
-    where('classId', '==', classId)
-  ) : null, [firestore, classId, user]);
+  const studentsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'students'), where('classId', '==', classId)) : null, [firestore, classId, user]);
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
-  
   const classDocRef = useMemoFirebase(() => user ? doc(firestore, 'classes', classId) : null, [firestore, classId, user]);
-  const { data: studentClass, isLoading: isLoadingClass } = useDoc<Class>(classDocRef);
-
-  const allFeesQuery = useMemoFirebase(() => user ? collection(firestore, 'fees') : null, [firestore, user]);
-  const { data: allFees, isLoading: isLoadingFees } = useCollection<FeeRecord>(allFeesQuery);
-
-  const isLoading = isLoadingStudents || isLoadingFees || isLoadingClass;
+  const { data: studentClass } = useDoc<Class>(classDocRef);
+  const { data: allFees } = useCollection<FeeRecord>(useMemoFirebase(() => user ? collection(firestore, 'fees') : null, [firestore, user]));
 
   const feesByStudentId = useMemo(() => {
-    if (!allFees) return new Map();
     const map = new Map<string, FeeRecord>();
-    for (const fee of allFees) {
-      map.set(fee.studentId, fee);
-    }
+    allFees?.forEach(fee => map.set(fee.studentId, fee));
     return map;
   }, [allFees]);
 
   const filteredStudents = useMemo(() => 
-    students?.filter(s => 
-      `${s.firstName} ${s.lastName}`.toLowerCase().includes(filter.toLowerCase())
-    ) ?? [], 
+    students?.filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(filter.toLowerCase())) ?? [], 
     [students, filter]
   );
   
-  const getStatusBadgeVariant = (status: FeeRecord['status'] | undefined) => {
-    switch (status) {
-      case 'Paid': return 'success';
-      case 'Pending': return 'destructive';
-      case 'Partial': return 'warning';
-      default: return 'secondary';
-    }
-  };
-
-  const handleCreateStudent = () => {
-    setSelectedStudent(null);
-    setStudentFormOpen(true);
-  };
-  
-  const handleEditStudent = (student: Student) => {
-    setSelectedStudent(student);
-    setStudentFormOpen(true);
-  };
-  
-  const handleUpdateFee = (student: Student) => {
-    setSelectedStudent(student);
-    setFeeFormOpen(true);
-  };
-
-  const handleManageResults = (student: Student) => {
-    setSelectedStudent(student);
-    setManageResultsOpen(true);
-  };
-  
-  const performDelete = async () => {
+  const performDeleteStudent = async () => {
     if (!studentToDelete) return;
-
-    setDeletingStudentId(studentToDelete.id);
-    const studentName = `${studentToDelete.firstName} ${studentToDelete.lastName}`;
-    setStudentToDelete(null); // Close dialog
-
+    setIsDeleting(true);
     try {
-        console.log('Attempting to delete student:', studentToDelete.id);
         const res = await deleteStudentFlow({ uid: studentToDelete.id });
-        console.log('Delete response:', res);
-        
-        if (res.success) {
-            toast({ 
-            title: 'Student Deleted', 
-            description: `${studentName} has been permanently removed.` 
-            });
-        } else {
-            console.error('Delete failed:', res.error);
-            throw new Error(res.error || 'An unknown error occurred during deletion.');
-        }
+        if (res.success) toast({ title: 'Student Deleted' });
+        else throw new Error(res.error);
     } catch (e: any) {
-        console.error('Delete error caught:', e);
-        toast({ 
-            title: 'Deletion Failed', 
-            description: e.message || 'Failed to delete student. Please check console for details.', 
-            variant: 'destructive' 
-        });
+        toast({ title: 'Deletion Failed', variant: 'destructive' });
     } finally {
-        setDeletingStudentId(null);
+        setIsDeleting(false);
+        setStudentToDelete(null);
     }
   };
 
-  const handleDownloadStudentList = () => {
-    if (!students || students.length === 0) {
-      toast({ title: "No Students", description: "There are no students in this class to download." });
-      return;
-    }
-    
-    if (!studentClass || !studentClass.subjects || studentClass.subjects.length === 0) {
-        toast({ title: "No Subjects", description: "This class has no subjects defined. Please edit the class to add subjects.", variant: 'destructive' });
-        return;
-    }
-
-    const escapeCsv = (val: string | null | undefined) => {
-        const str = String(val || '');
-        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-            return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-    };
-
-    const baseHeaders = ["studentId", "firstName", "lastName", "email"];
-    const subjectHeaders = studentClass.subjects;
-    const tailHeaders = ["position", "comments"];
-    const headers = [...baseHeaders, ...subjectHeaders, ...tailHeaders];
-    
-    const rows: string[] = students.map(student => {
-        const studentData = [
-            student.id,
-            student.firstName,
-            student.lastName,
-            student.email,
-        ];
-        const subjectPlaceholders = subjectHeaders.map(() => '');
-        const tailPlaceholders = tailHeaders.map(() => '');
-        
-        const rowData = [...studentData, ...subjectPlaceholders, ...tailPlaceholders];
-        return rowData.map(escapeCsv).join(',');
-    });
-
-    const csvContent = [
-      headers.join(','),
-      ...rows
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `results_template-${studentClass?.name?.replace(/\s/g, '_') || classId}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-    toast({ title: "Download Started", description: "Your result template is being downloaded." });
+  const performDeleteResult = async () => {
+      if (!resultToDelete) return;
+      setIsDeleting(true);
+      try {
+          const { studentId, result } = resultToDelete;
+          const batch = writeBatch(firestore);
+          batch.delete(doc(firestore, `users/${studentId}/academicResults`, result.id));
+          batch.delete(doc(firestore, 'academicResults', result.id));
+          await batch.commit();
+          toast({ title: 'Result Deleted' });
+      } catch (e: any) {
+          toast({ title: 'Delete Failed', variant: 'destructive' });
+      } finally {
+          setIsDeleting(false);
+          setResultToDelete(null);
+      }
   };
-  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center gap-4 flex-wrap">
-        <Button asChild variant="outline"><Link href="/admin/classes"><ArrowLeft className="mr-2 h-4 w-4" />Back to Classes</Link></Button>
+        <Button asChild variant="outline"><Link href="/admin/classes"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
         <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-          <Input placeholder="Filter students..." value={filter} onChange={e => setFilter(e.target.value)} className="w-40 sm:w-64" />
-          <Button onClick={handleDownloadStudentList} variant="outline"><Download className="mr-2 h-4 w-4" />List</Button>
-          <Button onClick={() => setBulkUploadOpen(true)} variant="outline" disabled={!students || students.length === 0}><FileUp className="mr-2 h-4 w-4" />Bulk Upload</Button>
-          <Button onClick={() => setClassResultFormOpen(true)} variant="outline" disabled={!students || students.length === 0}>
-            <Upload className="mr-2 h-4 w-4" />
-            Manual Upload
-          </Button>
-          <Button onClick={handleCreateStudent}><PlusCircle className="mr-2 h-4 w-4" />Create</Button>
+          <Input placeholder="Filter..." value={filter} onChange={e => setFilter(e.target.value)} className="w-40 sm:w-64" />
+          <Button onClick={() => setBulkUploadOpen(true)} variant="outline">Bulk Upload</Button>
+          <Button onClick={() => setClassResultFormOpen(true)} variant="outline">Manual Upload</Button>
+          <Button onClick={() => { setSelectedStudent(null); setStudentFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" />Create</Button>
         </div>
       </div>
 
@@ -1440,147 +1050,80 @@ export default function StudentManagement({ classId }: { classId: string }) {
         <Card>
           <CardContent className="p-0">
               <Table>
-              <TableHeader>
-                  <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="hidden md:table-cell">Email</TableHead>
-                      <TableHead>Fee Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Fee Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                  {isLoading ? (
-                      <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></TableCell></TableRow>
-                  ) : filteredStudents.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="h-24 text-center">No students found.</TableCell></TableRow>
-                  ) : (
-                      filteredStudents.map(student => {
-                        const feeRecord = feesByStudentId.get(student.id);
-                        return (
-                          <TableRow key={student.id}>
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-3">
-                                  <span>{student.firstName} {student.lastName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell">{student.email}</TableCell>
-                              <TableCell>
-                                <Badge variant={getStatusBadgeVariant(feeRecord?.status)}>
-                                  {feeRecord?.status || 'N/A'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => handleEditStudent(student)} disabled={!!deletingStudentId}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p>Edit Profile</p></TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => handleManageResults(student)} disabled={!!deletingStudentId}>
-                                                <BookOpen className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p>Manage Results</p></TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => handleUpdateFee(student)} disabled={!!deletingStudentId}>
-                                                <Landmark className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p>Update Fee Status</p></TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => setStudentToDelete(student)} disabled={!!deletingStudentId}>
-                                                {deletingStudentId === student.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent><p>Delete Student</p></TooltipContent>
-                                    </Tooltip>
-                                </div>
-                              </TableCell>
-                          </TableRow>
-                        )
-                      })
-                  )}
+                  {isLoadingStudents ? (
+                      <TableRow><TableCell colSpan={3} className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></TableCell></TableRow>
+                  ) : filteredStudents.map(student => (
+                      <TableRow key={student.id}>
+                          <TableCell>{student.firstName} {student.lastName}</TableCell>
+                          <TableCell><Badge variant={feesByStudentId.get(student.id)?.status === 'Paid' ? 'success' : 'destructive'}>{feesByStudentId.get(student.id)?.status || 'N/A'}</Badge></TableCell>
+                          <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setStudentFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setManageResultsOpen(true); }}><BookOpen className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setFeeFormOpen(true); }}><Landmark className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => setStudentToDelete(student)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </TableCell>
+                      </TableRow>
+                  ))}
               </TableBody>
               </Table>
           </CardContent>
         </Card>
       </TooltipProvider>
 
+      {/* MODALS */}
       <Dialog open={isStudentFormOpen} onOpenChange={setStudentFormOpen}>
-        <DialogContent key={`student-form-${selectedStudent?.id || 'new'}`}>
-          {isStudentFormOpen && (
-            <StudentForm 
-              setOpen={setStudentFormOpen}
-              student={selectedStudent || undefined} 
-              preselectedClassId={classId} 
-            />
-          )}
-        </DialogContent>
+        <DialogContent>{isStudentFormOpen && <StudentForm setOpen={setStudentFormOpen} student={selectedStudent || undefined} preselectedClassId={classId} />}</DialogContent>
       </Dialog>
       
       <Dialog open={isClassResultFormOpen} onOpenChange={setClassResultFormOpen}>
-        <DialogContent className="sm:max-w-4xl h-[90vh]" key={`class-result-form-${classId}`}>
-          {isClassResultFormOpen && students && studentClass &&(
-              <ClassResultForm students={students} studentClass={studentClass} setOpen={setClassResultFormOpen} />
-          )}
-        </DialogContent>
+        <DialogContent className="sm:max-w-4xl h-[90vh]">{isClassResultFormOpen && students && studentClass && <ClassResultForm students={students} studentClass={studentClass} setOpen={setClassResultFormOpen} />}</DialogContent>
       </Dialog>
       
       <Dialog open={isFeeFormOpen} onOpenChange={setFeeFormOpen}>
-        <DialogContent key={`fee-form-${selectedStudent?.id}`}>
-          {isFeeFormOpen && selectedStudent && (
-              <FeeForm student={selectedStudent} setOpen={setFeeFormOpen} />
-          )}
-        </DialogContent>
+        <DialogContent>{isFeeFormOpen && selectedStudent && <FeeForm student={selectedStudent} setOpen={setFeeFormOpen} />}</DialogContent>
       </Dialog>
 
        <Dialog open={isManageResultsOpen} onOpenChange={setManageResultsOpen}>
-         <DialogContent className="sm:max-w-2xl" key={`manage-results-${selectedStudent?.id}`}>
+         <DialogContent className="sm:max-w-2xl">
            {isManageResultsOpen && selectedStudent && (
-              <ManageResultsDialog student={selectedStudent} setOpen={setManageResultsOpen} />
+              <ManageResultsDialog 
+                student={selectedStudent} 
+                setOpen={setManageResultsOpen} 
+                onEditResult={(r) => { setResultToEdit(r); setEditResultOpen(true); }}
+                onDeleteResult={(r) => setResultToDelete({ studentId: selectedStudent.id, result: r })}
+              />
            )}
          </DialogContent>
       </Dialog>
 
+      <Dialog open={isEditResultOpen} onOpenChange={setEditResultOpen}>
+          <DialogContent>{isEditResultOpen && resultToEdit && <EditResultForm result={resultToEdit} setOpen={setEditResultOpen} />}</DialogContent>
+      </Dialog>
+
       <Dialog open={isBulkUploadOpen} onOpenChange={setBulkUploadOpen}>
-        <DialogContent
-          className="sm:max-w-2xl"
-          key={`bulk-upload-form-${classId}`}
-        >
-          {isBulkUploadOpen && students && studentClass && (
-            <BulkResultUploadForm students={students} studentClass={studentClass} setOpen={setBulkUploadOpen} />
-          )}
-        </DialogContent>
+        <DialogContent className="sm:max-w-2xl">{isBulkUploadOpen && students && studentClass && <BulkResultUploadForm students={students} studentClass={studentClass} setOpen={setBulkUploadOpen} />}</DialogContent>
       </Dialog>
       
+      {/* CONFIRMATIONS */}
       <AlertDialog open={!!studentToDelete} onOpenChange={(open) => !open && setStudentToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the student account for{' '}
-              <span className="font-semibold">{studentToDelete?.firstName} {studentToDelete?.lastName}</span>
-              {' '}and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Delete Student?</AlertDialogTitle><AlertDialogDescription>This permanently removes the student and all data.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={performDelete}
-              className={buttonVariants({ variant: 'destructive' })}
-            >
-              Delete Student
-            </AlertDialogAction>
+            <AlertDialogAction onClick={performDeleteStudent} className={buttonVariants({ variant: 'destructive' })} disabled={isDeleting}>Delete</AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!resultToDelete} onOpenChange={(open) => !open && setResultToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader><AlertDialogTitle>Delete Result?</AlertDialogTitle><AlertDialogDescription>Delete result for {resultToDelete?.result.className}?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={performDeleteResult} className={buttonVariants({ variant: 'destructive' })} disabled={isDeleting}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
