@@ -3,11 +3,7 @@ import { useState, useMemo } from 'react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-<<<<<<< HEAD
 import { Button, buttonVariants } from '@/components/ui/button';
-=======
-import { Button } from '@/components/ui/button';
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 import { Input } from '@/components/ui/input';
 import {
   Form,
@@ -22,7 +18,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import type { Class, Student } from '@/lib/types';
-import { Trash2, Edit, Loader2, PlusCircle, Users, ChevronRight, X } from 'lucide-react';
+import { Trash2, Edit, Loader2, PlusCircle, ChevronRight, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +27,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-<<<<<<< HEAD
 import {
     AlertDialog,
     AlertDialogAction,
@@ -42,8 +37,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-=======
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 import Link from 'next/link';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -52,13 +45,8 @@ const classSchema = z.object({
   name: z.string().min(1, 'Class name is required'),
   description: z.string().optional(),
   subjects: z.array(z.object({
-<<<<<<< HEAD
     value: z.string().min(1, 'Subject name required.'),
   })).min(1, "Add at least one subject."),
-=======
-    value: z.string().min(1, 'Subject name cannot be empty.'),
-  })).min(1, "Please add at least one subject."),
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 });
 
 function ClassForm({
@@ -77,11 +65,7 @@ function ClassForm({
     defaultValues: {
       name: currentClass?.name || '',
       description: currentClass?.description || '',
-<<<<<<< HEAD
       subjects: currentClass?.subjects?.map(s => ({ value: s })) || [{ value: '' }],
-=======
-      subjects: currentClass?.subjects?.map(s => ({ value: s })).length ? currentClass.subjects.map(s => ({ value: s })) : [{ value: '' }],
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
     },
   });
 
@@ -97,45 +81,18 @@ function ClassForm({
       description: values.description || '',
       subjects: values.subjects?.map(s => s.value).filter(Boolean) || [],
     };
-<<<<<<< HEAD
     try {
       if (currentClass) {
         await updateDoc(doc(firestore, 'classes', currentClass.id), classData);
         toast({ title: 'Class Updated!' });
       } else {
         await addDoc(collection(firestore, 'classes'), classData);
-=======
-
-    try {
-      if (currentClass) {
-        const classRef = doc(firestore, 'classes', currentClass.id);
-        await updateDoc(classRef, classData);
-        toast({ title: 'Class Updated!' });
-      } else {
-        const classColl = collection(firestore, 'classes');
-        await addDoc(classColl, classData);
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
         toast({ title: 'Class Created!' });
       }
       setOpen(false);
     } catch (error: any) {
-<<<<<<< HEAD
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `classes/${currentClass?.id || ''}`, operation: 'write' }));
       toast({ title: 'Save Failed', variant: 'destructive' });
-=======
-      console.error('Failed to save class:', error);
-      const operation = currentClass ? 'update' : 'create';
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `classes/${currentClass?.id || ''}`,
-            operation: operation,
-            requestResourceData: values,
-        }));
-      toast({
-        title: 'Save Failed',
-        description: 'Could not save class details. Check permissions and try again.',
-        variant: 'destructive',
-      });
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
     } finally {
       setIsSubmitting(false);
     }
@@ -145,54 +102,18 @@ function ClassForm({
     <DialogContent className="sm:max-w-md">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-<<<<<<< HEAD
           <DialogHeader><DialogTitle>{currentClass ? 'Edit Class' : 'New Class'}</DialogTitle></DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto pr-4 space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-=======
-          <DialogHeader>
-            <DialogTitle>{currentClass ? 'Edit Class' : 'Create New Class'}</DialogTitle>
-            <DialogDescription>
-              {currentClass ? 'Update the details for this class.' : 'Create a new class for students.'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="max-h-[60vh] overflow-y-auto pr-4 space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Class Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., JSS1" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., Junior Secondary School 1" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
             <div>
               <FormLabel>Subjects</FormLabel>
               <div className="space-y-2 mt-2">
                 {fields.map((field, index) => (
-<<<<<<< HEAD
                   <div key={field.id} className="flex gap-2">
                     <FormField control={form.control} name={`subjects.${index}.value`} render={({ field }) => (
                       <FormControl><Input {...field} /></FormControl>
@@ -201,53 +122,10 @@ function ClassForm({
                   </div>
                 ))}
               </div>
-              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ value: "" })}><PlusCircle className="mr-2 h-4 w-4" />Add</Button>
+              <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ value: "" })}><PlusCircle className="mr-2 h-4 w-4" />Add Subject</Button>
             </div>
           </div>
-          <DialogFooter><Button type="submit" disabled={isSubmitting}>Save</Button></DialogFooter>
-=======
-                  <FormField
-                    key={field.id}
-                    control={form.control}
-                    name={`subjects.${index}.value`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center gap-2">
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Mathematics" />
-                        </FormControl>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-                <FormMessage>{form.formState.errors.subjects?.root?.message}</FormMessage>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => append({ value: "" })}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Subject
-              </Button>
-            </div>
-          </div>
-
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Class
-            </Button>
-          </DialogFooter>
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
+          <DialogFooter><Button type="submit" disabled={isSubmitting}>Save Class</Button></DialogFooter>
         </form>
       </Form>
     </DialogContent>
@@ -257,7 +135,6 @@ function ClassForm({
 export default function ClassManagement() {
   const firestore = useFirestore();
   const { toast } = useToast();
-<<<<<<< HEAD
   const [isFormOpen, setFormOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [classToDelete, setClassToDelete] = useState<Class | null>(null);
@@ -272,7 +149,10 @@ export default function ClassManagement() {
     return acc;
   }, [students]);
 
-  const sortedClasses = useMemo(() => [...(classes || [])].sort((a, b) => a.name.localeCompare(b.name)), [classes]);
+  const sortedClasses = useMemo(() => {
+    if (!classes) return [];
+    return [...classes].sort((a, b) => a.name.localeCompare(b.name));
+  }, [classes]);
 
   const performDelete = async () => {
       if (!classToDelete) return;
@@ -286,187 +166,51 @@ export default function ClassManagement() {
           setIsDeleting(false);
           setClassToDelete(null);
       }
-=======
-
-  const [isFormOpen, setFormOpen] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-  const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
-
-
-  const classesQuery = useMemoFirebase(() => collection(firestore, 'classes'), [firestore]);
-  const { data: classes, isLoading: isLoadingClasses } = useCollection<Class>(classesQuery);
-  
-  const studentsQuery = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
-  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
-
-  const studentCountByClass = useMemo(() => {
-    if (!students) return {};
-    return students.reduce((acc, student) => {
-      if (student.classId) {
-        acc[student.classId] = (acc[student.classId] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-  }, [students]);
-
-  const isLoading = isLoadingClasses || isLoadingStudents;
-
-  const sortedClasses = useMemo(() => {
-    if (!classes) return [];
-    return [...classes].sort((a, b) => {
-      const getSortParts = (name: string) => {
-        const prefixMatch = name.match(/^[A-Za-z]+/);
-        const prefix = prefixMatch ? prefixMatch[0] : '';
-        const numMatch = name.match(/\d+$/);
-        const num = numMatch ? parseInt(numMatch[0], 10) : Infinity;
-
-        let prefixOrder;
-        if (prefix.toUpperCase().startsWith('JSS')) {
-          prefixOrder = 1;
-        } else if (prefix.toUpperCase().startsWith('SS')) {
-          prefixOrder = 2;
-        } else {
-          prefixOrder = 3;
-        }
-
-        return { prefixOrder, num, name };
-      };
-
-      const partsA = getSortParts(a.name);
-      const partsB = getSortParts(b.name);
-
-      if (partsA.prefixOrder !== partsB.prefixOrder) {
-        return partsA.prefixOrder - partsB.prefixOrder;
-      }
-
-      if (partsA.num !== partsB.num) {
-        return partsA.num - partsB.num;
-      }
-      
-      return partsA.name.localeCompare(partsB.name);
-    });
-  }, [classes]);
-
-  const handleCreate = () => {
-    setSelectedClass(null);
-    setFormOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if ((studentCountByClass[id] || 0) > 0) {
-      toast({ title: 'Cannot Delete Class', description: 'This class has students assigned to it. Please reassign students before deleting.', variant: 'destructive' });
-      return;
-    }
-    if (confirm('Are you sure you want to delete this class? This action cannot be undone.')) {
-      setDeletingClassId(id);
-      try {
-        const classRef = doc(firestore, 'classes', id);
-        await deleteDoc(classRef);
-        toast({ title: 'Class Deleted', variant: 'destructive' });
-      } catch (e: any) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: `classes/${id}`,
-            operation: 'delete',
-        }));
-        toast({ title: 'Delete failed', description: 'Could not delete class. Check permissions.', variant: 'destructive' });
-      } finally {
-        setDeletingClassId(null);
-      }
-    }
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
   };
 
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
       <div className="flex justify-end"><Button onClick={() => { setSelectedClass(null); setFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" />Create New Class</Button></div>
       <Card>
         <CardHeader><CardTitle>School Classes</CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          {isLoadingClasses ? <Loader2 className="mx-auto h-8 w-8 animate-spin" /> : sortedClasses.map(cls => (
-            <Card key={cls.id} className="hover:bg-muted/50 transition-colors">
-              <div className="p-4 flex items-center justify-between">
-                <Link href={`/admin/classes/${cls.id}`} className="flex-grow">
-                  <p className="font-semibold">{cls.name}</p>
-                  <p className="text-sm text-muted-foreground">{studentCountByClass[cls.id] || 0} Students</p>
-                </Link>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => { setSelectedClass(cls); setFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setClassToDelete(cls)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          {isLoadingClasses ? (
+            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : sortedClasses.length > 0 ? (
+            sortedClasses.map(cls => (
+              <Card key={cls.id} className="hover:bg-muted/50 transition-colors">
+                <div className="p-4 flex items-center justify-between">
+                  <Link href={`/admin/classes/${cls.id}`} className="flex-grow">
+                    <p className="font-semibold text-lg">{cls.name}</p>
+                    <p className="text-sm text-muted-foreground">{studentCountByClass[cls.id] || 0} Students</p>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); setSelectedClass(cls); setFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.preventDefault(); setClassToDelete(cls); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-=======
-      <div className="flex justify-end">
-        <Button onClick={handleCreate}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create New Class
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>School Classes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-             <div className="flex h-24 w-full items-center justify-center">
-                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : sortedClasses && sortedClasses.length > 0 ? (
-            <div className="space-y-2">
-                {sortedClasses.map(cls => (
-                    <Card key={cls.id} className="transition-all duration-200 ease-in-out hover:shadow-md hover:bg-muted/50">
-                        <Link href={`/admin/classes/${cls.id}`} className="block">
-                            <CardContent className="p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="font-semibold text-lg">{cls.name}</p>
-                                    <p className="text-sm text-muted-foreground flex items-center">
-                                        <Users className="h-4 w-4 mr-2" />
-                                        {studentCountByClass[cls.id] || 0} Students
-                                    </p>
-                                </div>
-                                <div className='flex items-center gap-2'>
-                                    <Button variant="ghost" size="icon" disabled={!!deletingClassId} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedClass(cls); setFormOpen(true); }}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" disabled={!!deletingClassId} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(cls.id);}}>
-                                        {deletingClassId === cls.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
-                                    </Button>
-                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                            </CardContent>
-                        </Link>
-                    </Card>
-                ))}
-            </div>
+              </Card>
+            ))
           ) : (
-            <div className="h-24 text-center content-center">
-                <p>No classes found. Create one to get started.</p>
-            </div>
+            <p className="text-center text-muted-foreground py-8">No classes found. Create one to get started.</p>
           )}
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
         </CardContent>
       </Card>
 
       <Dialog open={isFormOpen} onOpenChange={setFormOpen}>
         <ClassForm setOpen={setFormOpen} currentClass={selectedClass || undefined} />
       </Dialog>
-<<<<<<< HEAD
 
       <AlertDialog open={!!classToDelete} onOpenChange={(open) => !open && setClassToDelete(null)}>
         <AlertDialogContent>
-            <AlertDialogHeader><AlertDialogTitle>Delete Class?</AlertDialogTitle><AlertDialogDescription>This removes class {classToDelete?.name}. Ensure no students are assigned.</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogHeader><AlertDialogTitle>Delete Class?</AlertDialogTitle><AlertDialogDescription>This removes class {classToDelete?.name}. Ensure no students are assigned before deleting.</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={performDelete} className={buttonVariants({ variant: 'destructive' })} disabled={isDeleting || (classToDelete && studentCountByClass[classToDelete.id] > 0)}>Delete</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-=======
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
     </div>
   );
 }

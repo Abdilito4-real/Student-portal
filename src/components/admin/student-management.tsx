@@ -1,8 +1,8 @@
-// FULLY CORRECTED VERSION - UI Freezing Fixes Applied
+// FULLY CORRECTED VERSION - Cleaned from merge conflicts
 'use client';
 
-import { useState, useMemo, useEffect, Fragment, useCallback } from 'react';
-import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc, writeBatch, deleteDoc } from 'firebase/firestore';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useCollection, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, Loader2, ArrowLeft, Upload, FileUp, X, BookOpen, Edit, Trash2, Download, Landmark } from 'lucide-react';
+import { PlusCircle, Loader2, ArrowLeft, BookOpen, Edit, Trash2, Landmark } from 'lucide-react';
 import type { Student, Class, FeeRecord, AcademicResult } from '@/lib/types';
 import {
   Dialog,
@@ -43,9 +43,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { Textarea } from '../ui/textarea';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { WorkBook } from 'xlsx';
 
 // ===================== SCHEMAS =====================
@@ -758,10 +756,10 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
     const watchedAmountPaid = form.watch("amountPaid");
     const balance = (watchedAmount || 0) - (watchedAmountPaid || 0);
     
-    let status: 'Paid' | 'Pending' | 'Partial' = 'Pending';
+    let calculatedStatus: 'Paid' | 'Pending' | 'Partial' = 'Pending';
     if ((watchedAmount || 0) > 0) {
-        if (balance <= 0) status = 'Paid';
-        else if ((watchedAmountPaid || 0) > 0) status = 'Partial';
+        if (balance <= 0) calculatedStatus = 'Paid';
+        else if ((watchedAmountPaid || 0) > 0) calculatedStatus = 'Partial';
     }
 
     useEffect(() => {
@@ -792,7 +790,7 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
           amount: values.amount,
           amountPaid: values.amountPaid,
           balanceRemaining: values.amount - values.amountPaid,
-          status: status,
+          status: calculatedStatus,
           dueDate: new Date(values.dueDate).toISOString(),
           createdAt: serverTimestamp()
         };
@@ -840,7 +838,7 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
                   <FormItem><FormLabel>Due Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Status: <Badge variant={status === 'Paid' ? 'success' : status === 'Partial' ? 'warning' : 'destructive'}>{status}</Badge></span>
+                    <span className="text-muted-foreground">Status: <Badge variant={calculatedStatus === 'Paid' ? 'success' : calculatedStatus === 'Partial' ? 'warning' : 'destructive'}>{calculatedStatus}</Badge></span>
                     <span className="font-bold">Bal: ₦{balance.toLocaleString()}</span>
                 </div>
             </form>

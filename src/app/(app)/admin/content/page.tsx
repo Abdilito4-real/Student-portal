@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,19 +13,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-<<<<<<< HEAD
-import { Loader2 } from 'lucide-react';
-=======
 import { Loader2, Wand2 } from 'lucide-react';
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Image from 'next/image';
 import { defaultSiteContent } from '@/lib/default-content';
-<<<<<<< HEAD
-=======
 import { generateSiteContent } from '@/ai/flows/generate-site-titles-flow';
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 
 
 const contentSchema = z.object({
@@ -71,23 +63,11 @@ const SectionCard = ({ title, children, description }: { title: string; children
   </Card>
 );
 
-// A separate component to manage the image loading state internally
 const ImagePreview = ({ url, label }: { url: string | undefined | null; label: string }) => {
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-<<<<<<< HEAD
     setHasError(false);
-  }, [url]);
-
-  // If the URL isn't a valid string or has an error, render the placeholder.
-  if (!url || !url.startsWith('http') || hasError) {
-    return <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted" />;
-  }
-
-  // If we reach here, 'url' is a valid string, so we can safely pass it to the Image component.
-=======
-    setHasError(false); // Reset error state if URL changes
   }, [url]);
 
   const isValidUrl = url && typeof url === 'string' && url.startsWith('http');
@@ -96,8 +76,6 @@ const ImagePreview = ({ url, label }: { url: string | undefined | null; label: s
     return <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted" />;
   }
 
-  // At this point, TypeScript knows `url` is a valid string because of the `isValidUrl` check.
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
   return (
     <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
       <Image
@@ -116,7 +94,6 @@ const ImagePreview = ({ url, label }: { url: string | undefined | null; label: s
 };
 
 
-// Helper component for URL-based image inputs with previews
 const ImageUrlInput = ({ name, label }: { name: any; label: string }) => {
   const { control } = useFormContext();
 
@@ -151,10 +128,7 @@ export default function SiteContentPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-<<<<<<< HEAD
-=======
   const [isGenerating, setIsGenerating] = useState(false);
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 
   const contentDocRef = useMemoFirebase(() => doc(firestore, 'site_content', 'homepage'), [firestore]);
   const { data: contentData, isLoading } = useDoc<SiteContent>(contentDocRef);
@@ -170,8 +144,6 @@ export default function SiteContentPage() {
     }
   }, [contentData, form]);
 
-<<<<<<< HEAD
-=======
   async function handleGenerateContent() {
     const schoolName = form.getValues('schoolName');
     const missionStatement = form.getValues('missionText1');
@@ -192,7 +164,6 @@ export default function SiteContentPage() {
             missionStatement,
         });
         
-        // Update form fields with the generated titles and text
         form.setValue('heroTitle', result.heroTitle, { shouldDirty: true });
         form.setValue('heroSubtitle', result.heroSubtitle, { shouldDirty: true });
         form.setValue('missionTitle', result.missionTitle, { shouldDirty: true });
@@ -228,7 +199,6 @@ export default function SiteContentPage() {
   }
 
 
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
   async function onSubmit(values: z.infer<typeof contentSchema>) {
     setIsSubmitting(true);
     try {
@@ -242,33 +212,19 @@ export default function SiteContentPage() {
             return;
         }
 
-<<<<<<< HEAD
-        type ValuesType = z.infer<typeof contentSchema>;
         const dataToSave = Object.keys(dirtyFields).reduce((acc, key) => {
-            const k = key as keyof ValuesType;
-            if (k in values) {
-              (acc as any)[k] = values[k];
-            }
-            return acc;
-        }, {} as Partial<ValuesType>);
-
-
-        await setDoc(contentDocRef, { ...dataToSave, updatedAt: serverTimestamp() }, { merge: true });
-=======
-        const dataToSave = Object.keys(dirtyFields).reduce((acc, key) => {
-            acc[key] = values[key];
+            acc[key] = (values as any)[key];
             return acc;
         }, {} as any);
 
         dataToSave.updatedAt = serverTimestamp();
 
         await setDoc(contentDocRef, dataToSave, { merge: true });
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
         toast({
             title: 'Content Saved',
             description: 'Your homepage content has been updated successfully.',
         });
-        form.reset(values, { keepDirty: false }); // Reset dirty state after successful save
+        form.reset(values, { keepDirty: false });
     } catch (e: any) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: contentDocRef.path,
@@ -302,13 +258,10 @@ export default function SiteContentPage() {
               Edit the text and images displayed on the public landing page.
             </p>
         </div>
-<<<<<<< HEAD
-=======
         <Button onClick={handleGenerateContent} variant="outline" disabled={isGenerating || isSubmitting}>
             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             Generate Content with AI
         </Button>
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
       </div>
 
       <Form {...form}>
@@ -367,11 +320,7 @@ export default function SiteContentPage() {
                   <FormItem><FormLabel>Feature 2 Title</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="feature2Text" render={({ field }) => (
-<<<<<<< HEAD
-                  <FormItem className="mt-2"><FormLabel>Feature 2 Text</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormMessage>
-=======
                   <FormItem className="mt-2"><FormLabel>Feature 2 Text</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
                 )} />
               </div>
               <div>
@@ -390,11 +339,7 @@ export default function SiteContentPage() {
               <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
             )} />
              <FormField control={form.control} name="academicsText" render={({ field }) => (
-<<<<<<< HEAD
-              <FormItem><FormLabel>Text</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormMessage>
-=======
               <FormItem><FormLabel>Text</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
             )} />
           </SectionCard>
           
@@ -403,11 +348,7 @@ export default function SiteContentPage() {
               <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
             )} />
              <FormField control={form.control} name="communityText" render={({ field }) => (
-<<<<<<< HEAD
-              <FormItem><FormLabel>Text</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormMessage>
-=======
               <FormItem><FormLabel>Text</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
             )} />
           </SectionCard>
 
