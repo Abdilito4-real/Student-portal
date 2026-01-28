@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A server action for securely deleting a Firebase Authentication
@@ -75,6 +74,11 @@ export async function deleteStudent(input: DeleteStudentInput): Promise<DeleteSt
   try {
     const db = getAdminDb();
     const auth = getAdminAuth();
+    
+    if (!db || !auth) {
+        return { success: false, error: 'Firebase Admin SDK not initialized. Environment variables may be missing.' };
+    }
+
     const { uid } = parsedInput.data;
     
     console.log('Starting deletion for student UID:', uid);

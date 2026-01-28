@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A server action for securely creating a new Firebase Authentication
@@ -38,6 +37,11 @@ export async function createStudentAuthUser(input: CreateStudentAuthUserInput): 
 
   try {
     const auth = getAdminAuth();
+    
+    if (!auth) {
+      return { error: 'Firebase Admin SDK not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is set in environment variables.' };
+    }
+
     // 1. Create the user in Firebase Authentication
     const userRecord = await auth.createUser({
       email: parsedInput.data.email,
