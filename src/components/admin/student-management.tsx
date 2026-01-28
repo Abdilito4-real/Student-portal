@@ -167,7 +167,14 @@ function StudentForm({
         });
   
         if (authResult.error || !authResult.uid) {
-          throw new Error(authResult.error || "Failed to create user account.");
+          // Instead of throwing a generic Error, we handle the known error patterns
+          let errorMessage = authResult.error || "Failed to create user account.";
+          if (errorMessage.includes('auth/email-already-exists')) {
+            errorMessage = "This email address is already in use by another account.";
+          }
+          setFormError(errorMessage);
+          setIsSubmitting(false);
+          return;
         }
   
         const targetUid = authResult.uid;
