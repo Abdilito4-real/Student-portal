@@ -1054,18 +1054,23 @@ export default function StudentManagement({ classId }: { classId: string }) {
               <TableBody>
                   {isLoadingStudents ? (
                       <TableRow><TableCell colSpan={3} className="text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></TableCell></TableRow>
-                  ) : filteredStudents.map(student => (
-                      <TableRow key={student.id}>
-                          <TableCell>{student.firstName} {student.lastName}</TableCell>
-                          <TableCell><Badge variant={feesByStudentId.get(student.id)?.status === 'Paid' ? 'success' : 'destructive'}>{feesByStudentId.get(student.id)?.status || 'N/A'}</Badge></TableCell>
-                          <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setStudentFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setManageResultsOpen(true); }}><BookOpen className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setFeeFormOpen(true); }}><Landmark className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => setStudentToDelete(student)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </TableCell>
-                      </TableRow>
-                  ))}
+                  ) : filteredStudents.map(student => {
+                      const feeStatus = feesByStudentId.get(student.id)?.status;
+                      const badgeVariant = feeStatus === 'Paid' ? 'success' : feeStatus === 'Partial' ? 'warning' : feeStatus === 'Pending' ? 'destructive' : 'outline';
+                      
+                      return (
+                        <TableRow key={student.id}>
+                            <TableCell>{student.firstName} {student.lastName}</TableCell>
+                            <TableCell><Badge variant={badgeVariant}>{feeStatus || 'N/A'}</Badge></TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setStudentFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setManageResultsOpen(true); }}><BookOpen className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setFeeFormOpen(true); }}><Landmark className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => setStudentToDelete(student)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </TableCell>
+                        </TableRow>
+                      );
+                  })}
               </TableBody>
               </Table>
           </CardContent>
