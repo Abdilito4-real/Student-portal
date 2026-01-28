@@ -10,31 +10,29 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import type { SiteContent } from '@/lib/types';
 import { cache } from 'react';
 
-// Use React's cache function to fetch the data once per request.
+/**
+ * Fetches homepage content from Firestore with a fallback for build-time safety.
+ */
 const getHomepageContent = cache(async (): Promise<SiteContent> => {
-  const db = getAdminDb();
-
-  // If the admin SDK could not be initialized (e.g., missing secrets),
-  // we return the default content. This makes the build resilient.
-  if (!db) {
-    return defaultSiteContent;
-  }
-  
-  // If we have a DB connection, try to fetch the content.
   try {
+    const db = getAdminDb();
+
+    // If Admin SDK initialization was skipped (e.g., during build), return defaults.
+    if (!db) {
+      return defaultSiteContent;
+    }
+
     const contentRef = db.collection('site_content').doc('homepage');
     const contentSnap = await contentRef.get();
 
     if (contentSnap.exists) {
-      // Merge fetched data with defaults to ensure all fields are present
       return { ...defaultSiteContent, ...(contentSnap.data() as SiteContent) };
     }
-    // If document doesn't exist in Firestore, return the default content.
+    
     return defaultSiteContent;
   } catch (error: any) {
-    // This catch block now only handles unexpected Firestore errors (e.g., network issues),
-    // not initialization failures, as those are handled by the `if (!db)` check.
-    console.error("Unexpected error fetching homepage content:", error.message);
+    // Log the error but don't crash the build.
+    console.warn("Resilient fetch: Falling back to default content due to error:", error.message);
     return defaultSiteContent;
   }
 });
