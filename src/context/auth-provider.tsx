@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -50,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const adminSnap = await getDoc(adminRoleRef);
 
         if (adminSnap.exists()) {
-          // User is an ADMIN
           const adminUser: User = {
             uid: fbUser.uid,
             email: fbUser.email,
@@ -59,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           setUser(adminUser);
         } else {
-          // User is a STUDENT, fetch their profile
           const studentRef = doc(firestore, `students/${fbUser.uid}`);
           const studentSnap = await getDoc(studentRef);
 
@@ -74,12 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             setUser(studentUser);
           } else {
-             // Fallback if student document doesn't exist
             console.warn(`No student document found for UID: ${fbUser.uid}`);
             const fallbackUser: User = {
               uid: fbUser.uid,
               email: fbUser.email,
-              displayName: fbUser.email, // Fallback display name
+              displayName: fbUser.email,
               role: 'student',
             };
             setUser(fallbackUser);
@@ -87,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         console.error("Error fetching user role or data:", e);
-        // Fallback to a basic user object on error
         const errorUser: User = {
           uid: fbUser.uid,
           email: fbUser.email,
@@ -146,16 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     if (!auth) throw new Error("Auth service not available");
-<<<<<<< HEAD
-    
-    // Add a more specific check for configuration issues.
-    // This provides a better error message if .env variables are missing.
     if (!auth.app.options.apiKey) {
-      throw new Error("Firebase configuration is missing. Please ensure your environment variables are set correctly.");
+      throw new Error("Firebase configuration is missing. Please check your config.");
     }
-
-=======
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
     await signInWithEmailAndPassword(auth, email, password);
   };
 
