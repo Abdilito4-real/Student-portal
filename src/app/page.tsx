@@ -21,6 +21,7 @@ const getHomepageContent = cache(async (): Promise<SiteContent> => {
 
     if (contentSnap.exists) {
       const dbData = contentSnap.data() || {};
+      // Filter out empty strings, nulls, and undefined values to prevent overwriting defaults with invalid data
       const cleanDbData = Object.fromEntries(
         Object.entries(dbData).filter(([_, v]) => v !== "" && v !== null && v !== undefined)
       );
