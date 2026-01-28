@@ -264,8 +264,12 @@ function StudentForm({
               
               <FormField control={form.control} name="classId" render={({ field }) => (
                 <FormItem><FormLabel>Class</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}><FormControl><SelectTrigger disabled={isLoadingClasses}><SelectValue /></SelectTrigger></FormControl>
-                <SelectContent>{isLoadingClasses ? <div className='p-4 text-center'><Loader2 className="h-4 w-4 animate-spin text-primary"/></div> : classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl><SelectTrigger disabled={isLoadingClasses}><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>{isLoadingClasses ? <div className='p-4 text-center'><Loader2 className="h-4 w-4 animate-spin text-primary"/></div> : classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
               )} />
           </div>
 
@@ -445,7 +449,7 @@ function ClassResultForm({
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 flex-grow overflow-y-auto">
                         <div className="md:col-span-1 space-y-1 pr-4 border-r">
-                            <h4 className="font-medium text-sm mb-2 sticky top-0 bg-content py-2">Subjects</h4>
+                            <h4 className="font-medium text-sm mb-2 sticky top-0 bg-background py-2">Subjects</h4>
                             <div className="h-full overflow-y-auto">
                                 {(studentClass.subjects || []).map(subject => (
                                     <Button
@@ -462,7 +466,7 @@ function ClassResultForm({
                         </div>
 
                         <div className="md:col-span-2 space-y-4">
-                            <h4 className="font-medium text-sm sticky top-0 bg-content py-2">Grades & Positions for {selectedSubject}</h4>
+                            <h4 className="font-medium text-sm sticky top-0 bg-background py-2">Grades & Positions for {selectedSubject}</h4>
                             <div className="rounded-md border h-full overflow-y-auto">
                                 <Table>
                                     <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm">
@@ -741,7 +745,7 @@ function FeeForm({ student, setOpen }: { student: Student; setOpen: (open: boole
     });
 
     const feesQuery = useMemoFirebase(() => query(collection(firestore, `users/${student.id}/fees`)), [firestore, student.id]);
-    const { data: fees, isLoading } = useCollection<FeeRecord>(feesQuery);
+    const { data: fees } = useCollection<FeeRecord>(feesQuery);
     const currentFee = fees?.[0];
     
     const watchedAmount = form.watch("amount");
