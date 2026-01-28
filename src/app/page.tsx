@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-'use server';
-
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -11,15 +8,10 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import type { SiteContent } from '@/lib/types';
 import { cache } from 'react';
 
-/**
- * Fetches homepage content from Firestore with a fallback for build-time safety.
- * Filters out empty strings from the database to ensure default values persist.
- */
 const getHomepageContent = cache(async (): Promise<SiteContent> => {
   try {
     const db = getAdminDb();
 
-    // If Admin SDK initialization was skipped (e.g., during build), return defaults.
     if (!db) {
       return defaultSiteContent;
     }
@@ -29,7 +21,6 @@ const getHomepageContent = cache(async (): Promise<SiteContent> => {
 
     if (contentSnap.exists) {
       const dbData = contentSnap.data() || {};
-      // Filter out empty strings so they don't overwrite the robust defaults
       const cleanDbData = Object.fromEntries(
         Object.entries(dbData).filter(([_, v]) => v !== "" && v !== null && v !== undefined)
       );
@@ -38,62 +29,13 @@ const getHomepageContent = cache(async (): Promise<SiteContent> => {
     
     return defaultSiteContent;
   } catch (error: any) {
-    // Log the error but don't crash the build.
-    console.warn("Resilient fetch: Falling back to default content due to error:", error.message);
+    console.error("Error fetching homepage content:", error.message);
     return defaultSiteContent;
   }
-=======
-import Image from 'next/image';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PublicHeader } from '@/components/layout/public-header';
-import { PublicFooter } from '@/components/layout/public-footer';
-import { admin } from '@/lib/firebase-admin';
-import type { SiteContent } from '@/lib/types';
-import { cache } from 'react';
-import { defaultSiteContent as defaultContent } from '@/lib/default-content';
-
-// Helper to find image by ID
-const findImage = (id: string) => {
-    const img = PlaceHolderImages.find(p => p.id === id);
-    if (!img) {
-        return {
-            imageUrl: 'https://picsum.photos/seed/default/1200/800',
-            imageHint: 'placeholder image'
-        }
-    }
-    return {
-        imageUrl: img.imageUrl,
-        imageHint: img.imageHint
-    };
-};
-
-// Use React's cache function to fetch data and cache it for the duration of a request
-const getHomepageContent = cache(async (): Promise<SiteContent> => {
-    try {
-        const contentDoc = await admin.firestore().collection('site_content').doc('homepage').get();
-        if (contentDoc.exists) {
-            // Merge with defaults to prevent missing fields from breaking the page
-            return { ...defaultContent, ...contentDoc.data() as Partial<SiteContent> };
-        }
-        return defaultContent;
-    } catch (error) {
-        console.error("Error fetching homepage content:", error);
-        return defaultContent;
-    }
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 });
 
 export default async function HomePage() {
   const content = await getHomepageContent();
-<<<<<<< HEAD
-=======
-  const heroImageHint = findImage('hero-campus').imageHint;
-  const missionImageHint = findImage('mission-students').imageHint;
-  const academicsImageHint = findImage('academics-library').imageHint;
-  const campusLifeImageHint = findImage('campus-life-group').imageHint;
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -102,20 +44,12 @@ export default async function HomePage() {
         {/* Hero Section */}
         <section className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center text-center text-white">
           <Image
-<<<<<<< HEAD
             src={content.heroImageUrl || defaultSiteContent.heroImageUrl}
-=======
-            src={content.heroImageUrl || defaultContent.heroImageUrl}
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
             alt="University campus"
             fill
             className="object-cover"
             priority
-<<<<<<< HEAD
             data-ai-hint="modern university"
-=======
-            data-ai-hint={heroImageHint}
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
           />
           <div className="absolute inset-0 bg-black/50" />
           <div className="relative z-10 space-y-4 px-4">
@@ -153,19 +87,11 @@ export default async function HomePage() {
               </div>
               <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
                  <Image
-<<<<<<< HEAD
                     src={content.missionImageUrl || defaultSiteContent.missionImageUrl}
                     alt="Students collaborating"
                     fill
                     className="object-cover"
                     data-ai-hint="students collaborating"
-=======
-                    src={content.missionImageUrl || defaultContent.missionImageUrl}
-                    alt="Students collaborating"
-                    fill
-                    className="object-cover"
-                    data-ai-hint={missionImageHint}
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
                 />
               </div>
             </div>
@@ -207,19 +133,11 @@ export default async function HomePage() {
                 <div className="grid gap-10 md:grid-cols-2 md:gap-16 items-center">
                     <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
                         <Image
-<<<<<<< HEAD
                             src={content.academicsImageUrl || defaultSiteContent.academicsImageUrl}
                             alt="Library with students"
                             fill
                             className="object-cover"
                             data-ai-hint="university library"
-=======
-                            src={content.academicsImageUrl || defaultContent.academicsImageUrl}
-                            alt="Library with students"
-                            fill
-                            className="object-cover"
-                            data-ai-hint={academicsImageHint}
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
                         />
                     </div>
                     <div>
@@ -247,19 +165,11 @@ export default async function HomePage() {
               </div>
               <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
                  <Image
-<<<<<<< HEAD
                     src={content.communityImageUrl || defaultSiteContent.communityImageUrl}
                     alt="Group of students laughing"
                     fill
                     className="object-cover"
                     data-ai-hint="students outdoors"
-=======
-                    src={content.communityImageUrl || defaultContent.communityImageUrl}
-                    alt="Group of students laughing"
-                    fill
-                    className="object-cover"
-                    data-ai-hint={campusLifeImageHint}
->>>>>>> f3fc7ab7796ee56f68192834a35aa6e318beed84
                 />
               </div>
             </div>
