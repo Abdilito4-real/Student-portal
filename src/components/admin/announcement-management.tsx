@@ -77,6 +77,7 @@ const AnnouncementForm = ({
   });
 
   async function onSubmit(values: z.infer<typeof announcementSchema>) {
+    if (!firestore) return;
     setIsSubmitting(true);
     try {
         const classIds = values.targetClass === 'all' ? allClassIds : [values.targetClass];
@@ -151,13 +152,13 @@ export default function AnnouncementManagement() {
   const [announcementToDelete, setAnnouncementToDelete] = useState<Announcement | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: announcements, isLoading: isLoadingAnnouncements } = useCollection<Announcement>(useMemoFirebase(() => user ? collection(firestore, 'announcements') : null, [firestore, user]));
-  const { data: classes, isLoading: isLoadingClasses } = useCollection<Class>(useMemoFirebase(() => user ? collection(firestore, 'classes') : null, [firestore, user]));
+  const { data: announcements, isLoading: isLoadingAnnouncements } = useCollection<Announcement>(useMemoFirebase(() => (user && firestore) ? collection(firestore, 'announcements') : null, [firestore, user]));
+  const { data: classes, isLoading: isLoadingClasses } = useCollection<Class>(useMemoFirebase(() => (user && firestore) ? collection(firestore, 'classes') : null, [firestore, user]));
 
   const sortedAnnouncements = useMemo(() => [...(announcements || [])].sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)), [announcements]);
 
   const performDelete = async () => {
-      if (!announcementToDelete) return;
+      if (!announcementToDelete || !firestore) return;
       setIsDeleting(true);
       try {
           await deleteDoc(doc(firestore, 'announcements', announcementToDelete.id));

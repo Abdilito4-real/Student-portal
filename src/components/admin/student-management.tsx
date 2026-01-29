@@ -71,7 +71,7 @@ function StudentForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const classesQuery = useMemoFirebase(() => user ? collection(firestore, 'classes') : null, [firestore, user]);
+  const classesQuery = useMemoFirebase(() => (user && firestore) ? collection(firestore, 'classes') : null, [firestore, user]);
   const { data: classes, isLoading: isLoadingClasses } = useCollection<Class>(classesQuery);
   
   const form = useForm<z.infer<typeof studentSchema>>({
@@ -82,6 +82,10 @@ function StudentForm({
   });
 
   async function onSubmit(values: z.infer<typeof studentSchema>) {
+    if (!firestore) {
+      toast({ title: 'Error', description: 'Firestore service not available', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     setFormError(null);
   
@@ -304,6 +308,7 @@ export default function StudentManagement({ classId }: { classId: string }) {
       // Map email to student ID
       const studentsByEmail = new Map(students?.map(s => [s.email.toLowerCase(), s.id]));
 
+      if (!firestore) throw new Error("Firestore service not available");
       const batch = writeBatch(firestore);
       let count = 0;
       for (const res of rawResults) {

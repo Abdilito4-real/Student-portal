@@ -130,7 +130,10 @@ export default function SiteContentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const contentDocRef = useMemoFirebase(() => doc(firestore, 'site_content', 'homepage'), [firestore]);
+  const contentDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'site_content', 'homepage');
+  }, [firestore]);
   const { data: contentData, isLoading } = useDoc<SiteContent>(contentDocRef);
   
   const form = useForm<z.infer<typeof contentSchema>>({
@@ -200,6 +203,7 @@ export default function SiteContentPage() {
 
 
   async function onSubmit(values: z.infer<typeof contentSchema>) {
+    if (!firestore || !contentDocRef) return;
     setIsSubmitting(true);
     try {
         const dirtyFields = form.formState.dirtyFields;

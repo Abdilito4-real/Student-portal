@@ -25,16 +25,28 @@ const StatCard = ({ title, value, icon: Icon, color, isLoading }: { title: strin
 export default function AdminDashboard() {
   const firestore = useFirestore();
 
-  const studentsQuery = useMemoFirebase(() => query(collection(firestore, 'students')), [firestore]);
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'students'));
+  }, [firestore]);
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
   
-  const allFeesQuery = useMemoFirebase(() => query(collection(firestore, 'fees')), [firestore]);
+  const allFeesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'fees'));
+  }, [firestore]);
   const { data: allFees, isLoading: isLoadingFees } = useCollection<FeeRecord>(allFeesQuery);
   
-  const recentActivitiesQuery = useMemoFirebase(() => query(collection(firestore, 'fees'), orderBy('createdAt', 'desc'), limit(3)), [firestore]);
+  const recentActivitiesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'fees'), orderBy('createdAt', 'desc'), limit(3));
+  }, [firestore]);
   const { data: recentFees, isLoading: isLoadingRecent } = useCollection<FeeRecord>(recentActivitiesQuery);
 
-  const contentDocRef = useMemoFirebase(() => doc(firestore, 'site_content', 'homepage'), [firestore]);
+  const contentDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'site_content', 'homepage');
+  }, [firestore]);
   const { data: siteContent, isLoading: isLoadingContent } = useDoc<SiteContent>(contentDocRef);
 
 

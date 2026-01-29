@@ -36,10 +36,10 @@ export function FeeDialog({ student }: { student: Student }) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingFee, setEditingFee] = useState<FeeRecord | null>(null);
 
-  const feesQuery = useMemoFirebase(() =>
-    query(collection(firestore, 'fees'), where('studentId', '==', student.id), orderBy('createdAt', 'desc')),
-    [firestore, student.id]
-  );
+  const feesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'fees'), where('studentId', '==', student.id), orderBy('createdAt', 'desc'));
+  }, [firestore, student.id]);
   const { data: fees, isLoading } = useCollection<FeeRecord>(feesQuery);
 
   const form = useForm<z.infer<typeof feeSchema>>({
@@ -55,6 +55,7 @@ export function FeeDialog({ student }: { student: Student }) {
   });
 
   async function onSubmit(values: z.infer<typeof feeSchema>) {
+    if (!firestore) return;
     const balanceRemaining = values.amount - values.amountPaid;
     try {
       if (editingFee) {
@@ -84,6 +85,7 @@ export function FeeDialog({ student }: { student: Student }) {
 
   const deleteFee = async (id: string) => {
     if (!confirm('Are you sure you want to delete this fee record?')) return;
+    if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, 'fees', id));
       toast({ title: 'Fee Record Deleted' });

@@ -35,10 +35,10 @@ export function ResultDialog({ student }: { student: Student }) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingResult, setEditingResult] = useState<AcademicResult | null>(null);
 
-  const resultsQuery = useMemoFirebase(() =>
-    query(collection(firestore, 'academicResults'), where('studentId', '==', student.id), orderBy('createdAt', 'desc')),
-    [firestore, student.id]
-  );
+  const resultsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'academicResults'), where('studentId', '==', student.id), orderBy('createdAt', 'desc'));
+  }, [firestore, student.id]);
   const { data: results, isLoading } = useCollection<AcademicResult>(resultsQuery);
 
   const form = useForm<z.infer<typeof resultSchema>>({
@@ -53,6 +53,7 @@ export function ResultDialog({ student }: { student: Student }) {
   });
 
   async function onSubmit(values: z.infer<typeof resultSchema>) {
+    if (!firestore) return;
     try {
       if (editingResult) {
         await updateDoc(doc(firestore, 'academicResults', editingResult.id), {
@@ -85,6 +86,7 @@ export function ResultDialog({ student }: { student: Student }) {
 
   const deleteResult = async (id: string) => {
     if (!confirm('Are you sure you want to delete this result?')) return;
+    if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, 'academicResults', id));
       toast({ title: 'Result Deleted' });

@@ -12,7 +12,7 @@ export default function StudentDashboard() {
 
   const announcementsQuery = useMemoFirebase(
     () =>
-      user?.role === 'student' && user?.classId
+      user?.role === 'student' && user?.classId && firestore
         ? query(
             collection(firestore, 'announcements'),
             where('classIds', 'array-contains', user.classId)
@@ -24,7 +24,7 @@ export default function StudentDashboard() {
     useCollection<Announcement>(announcementsQuery);
 
   const classesQuery = useMemoFirebase(
-    () => (user?.role === 'student' ? collection(firestore, 'classes') : null),
+    () => (user?.role === 'student' && firestore ? collection(firestore, 'classes') : null),
     [firestore, user?.role]
   );
   const { data: classes, isLoading: isLoadingClasses } =
