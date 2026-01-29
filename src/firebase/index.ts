@@ -2,34 +2,62 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 /**
  * Initializes and returns the Firebase SDK instances.
+ * Returns null for services if configuration is missing to prevent runtime crashes.
  */
 export function initializeFirebase() {
-  if (getApps().length) {
+  if (getApps().length > 0) {
     const existingApp = getApp();
     return getSdks(existingApp);
   }
 
-  // Validate that we have at least an API key before initializing
-  if (!firebaseConfig.apiKey) {
-    console.warn('Firebase Warning: NEXT_PUBLIC_FIREBASE_API_KEY is missing. Ensure your environment variables are configured in Vercel.');
+  // Check if the configuration is valid before initializing
+  const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
+
+  if (!isConfigValid) {
+    if (typeof window !== 'undefined') {
+      console.error(
+        'Firebase Error: NEXT_PUBLIC_FIREBASE_API_KEY is missing. ' +
+        'Please set your environment variables in Vercel or .env.local.'
+      );
+    }
+    return {
+      firebaseApp: null,
+      auth: null,
+      firestore: null,
+    };
   }
 
-  const firebaseApp = initializeApp(firebaseConfig);
-  return getSdks(firebaseApp);
+  try {
+    const firebaseApp = initializeApp(firebaseConfig);
+    return getSdks(firebaseApp);
+  } catch (error) {
+    console.error('Failed to initialize Firebase:', error);
+    return {
+      firebaseApp: null,
+      auth: null,
+      firestore: null,
+    };
+  }
 }
 
 /**
  * Returns the Auth and Firestore instances for a given FirebaseApp.
  */
 export function getSdks(firebaseApp: FirebaseApp) {
-  // Gracefully handle potentially uninitialized auth/firestore if config is invalid
-  const auth = getAuth(firebaseApp);
-  const firestore = getFirestore(firebaseApp);
+  let auth: Auth | null = null;
+  let firestore: Firestore | null = null;
+
+  try {
+    auth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+  } catch (error) {
+    console.error('Error getting Firebase services:', error);
+  }
 
   return {
     firebaseApp,

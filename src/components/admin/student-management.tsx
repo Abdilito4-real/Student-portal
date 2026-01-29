@@ -269,9 +269,15 @@ export default function StudentManagement({ classId }: { classId: string }) {
   const [isStudentFormOpen, setStudentFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const studentsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'students'), where('classId', '==', classId)) : null, [firestore, classId, user]);
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'students'), where('classId', '==', classId));
+  }, [firestore, classId, user]);
   const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsQuery);
-  const { data: allFees } = useCollection<FeeRecord>(useMemoFirebase(() => user ? collection(firestore, 'fees') : null, [firestore, user]));
+  const { data: allFees } = useCollection<FeeRecord>(useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'fees');
+  }, [firestore, user]));
 
   const feesByStudentId = useMemo(() => {
     const map = new Map<string, FeeRecord>();
