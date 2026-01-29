@@ -16,13 +16,16 @@ export function initializeFirebase() {
   }
 
   // Check if the configuration is valid before initializing
-  const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
+  // We check for both existence and the literal string "undefined" which can happen in some build environments
+  const isConfigValid = !!firebaseConfig.apiKey && 
+                        firebaseConfig.apiKey !== 'undefined' && 
+                        firebaseConfig.apiKey !== '';
 
   if (!isConfigValid) {
     if (typeof window !== 'undefined') {
-      console.error(
-        'Firebase Error: NEXT_PUBLIC_FIREBASE_API_KEY is missing. ' +
-        'Please set your environment variables in Vercel or .env.local.'
+      console.warn(
+        'Firebase Configuration Missing: The app is running without client-side Firebase credentials. ' +
+        'Please ensure NEXT_PUBLIC_FIREBASE_API_KEY and other variables are set in Vercel.'
       );
     }
     return {
