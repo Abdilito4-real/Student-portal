@@ -12,8 +12,7 @@ const initializeAdminApp = () => {
 
   const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  if (!serviceAccountVar) {
-    console.error('Firebase Admin SDK Error: FIREBASE_SERVICE_ACCOUNT_JSON environment variable not found.');
+  if (!serviceAccountVar || serviceAccountVar === 'undefined') {
     return null;
   }
 
