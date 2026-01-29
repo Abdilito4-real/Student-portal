@@ -3,10 +3,10 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 /**
  * Firebase configuration.
  * For prototypes, we use the values directly to ensure the app initializes correctly
- * in all environments.
+ * in all environments. Ensure environment variables are set in production.
  */
 export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAs-prototype-key-fix",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAs-placeholder-key",
   authDomain: `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "studio-6813230896-c1cd5"}.firebaseapp.com`,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "studio-6813230896-c1cd5",
   storageBucket: `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "studio-6813230896-c1cd5"}.firebasestorage.app`,

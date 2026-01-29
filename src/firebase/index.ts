@@ -15,9 +15,8 @@ export function initializeFirebase() {
   }
 
   // Validate that we have at least an API key before initializing
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
-    console.error('Firebase configuration is invalid or missing.');
-    // Return dummy instances or handle as appropriate for your error boundary
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("placeholder")) {
+    console.warn('Firebase configuration is using a placeholder API key.');
   }
 
   const firebaseApp = initializeApp(firebaseConfig);
