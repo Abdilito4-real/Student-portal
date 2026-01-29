@@ -13,17 +13,21 @@ export const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Check if the configuration is valid
-const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
+// Check if the configuration is valid (not empty, not "undefined" string)
+export const isFirebaseConfigValid = !!(
+  firebaseConfig.apiKey && 
+  firebaseConfig.apiKey !== 'undefined' &&
+  firebaseConfig.apiKey.length > 10
+);
 
-if (!isConfigValid && typeof window !== 'undefined') {
+if (!isFirebaseConfigValid && typeof window !== 'undefined') {
   console.warn(
-    'Firebase Warning: NEXT_PUBLIC_FIREBASE_API_KEY is missing. ' +
-    'The app will not be able to connect to Firebase services.'
+    'Firebase Warning: NEXT_PUBLIC_FIREBASE_API_KEY is missing or invalid. ' +
+    'The app will not be able to connect to Firebase services until this is set in Vercel.'
   );
 }
 
-const app = getApps().length === 0 ? (isConfigValid ? initializeApp(firebaseConfig) : null) : getApp();
+const app = getApps().length === 0 ? (isFirebaseConfigValid ? initializeApp(firebaseConfig) : null) : getApp();
 
 export { app };
 export default app;

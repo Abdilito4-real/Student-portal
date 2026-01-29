@@ -1,6 +1,6 @@
 'use client';
 
-import { firebaseConfig } from '@/firebase/config';
+import { firebaseConfig, isFirebaseConfigValid } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
@@ -15,9 +15,7 @@ export function initializeFirebase() {
     return getSdks(existingApp);
   }
 
-  const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
-
-  if (!isConfigValid) {
+  if (!isFirebaseConfigValid) {
     return {
       firebaseApp: null,
       auth: null,
@@ -54,10 +52,11 @@ export function getSdks(firebaseApp: FirebaseApp | null) {
   let firestore: Firestore | null = null;
 
   try {
+    // getAuth and getFirestore can throw if the app configuration is partially invalid
     auth = getAuth(firebaseApp);
     firestore = getFirestore(firebaseApp);
   } catch (error) {
-    console.error('Error getting Firebase services:', error);
+    console.error('Error getting Firebase services from initialized app:', error);
   }
 
   return {
