@@ -38,6 +38,19 @@ try {
   console.warn('Admin SDK initialization deferred');
 }
 
+/**
+ * Returns the Auth instance for the Admin SDK.
+ */
+export function getAdminAuth() {
+  if (!adminApp) {
+    return null;
+  }
+  return adminApp.auth();
+}
+
+/**
+ * Returns the Firestore instance for the Admin SDK.
+ */
 export function getAdminDb() {
   if (!adminApp) {
     return null;

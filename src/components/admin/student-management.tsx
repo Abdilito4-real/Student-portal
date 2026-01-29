@@ -224,7 +224,7 @@ function StudentForm({
               )} />
               
               {!student && <FormField control={form.control} name="password" render={({ field }) => (
-                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormMessage>
+                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
               )} />}
               
               <FormField control={form.control} name="classId" render={({ field }) => (
