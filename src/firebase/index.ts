@@ -15,8 +15,8 @@ export function initializeFirebase() {
   }
 
   // Validate that we have at least an API key before initializing
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("placeholder")) {
-    console.warn('Firebase configuration is using a placeholder API key.');
+  if (!firebaseConfig.apiKey) {
+    console.warn('Firebase Warning: NEXT_PUBLIC_FIREBASE_API_KEY is missing. Ensure your environment variables are configured in Vercel.');
   }
 
   const firebaseApp = initializeApp(firebaseConfig);
@@ -27,10 +27,14 @@ export function initializeFirebase() {
  * Returns the Auth and Firestore instances for a given FirebaseApp.
  */
 export function getSdks(firebaseApp: FirebaseApp) {
+  // Gracefully handle potentially uninitialized auth/firestore if config is invalid
+  const auth = getAuth(firebaseApp);
+  const firestore = getFirestore(firebaseApp);
+
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
+    auth,
+    firestore,
   };
 }
 
