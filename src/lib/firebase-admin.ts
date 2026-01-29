@@ -18,12 +18,20 @@ const initializeAdminApp = () => {
   }
 
   try {
-    // Handle potentially escaped JSON from environment variables (common in some CI/CD and dotenv setups)
-    const jsonString = serviceAccountVar.includes('\\"')
-      ? serviceAccountVar.replace(/\\"/g, '"').replace(/\n/g, '\\n')
-      : serviceAccountVar;
-
-    const serviceAccount = JSON.parse(jsonString);
+    let serviceAccount;
+    try {
+      // First try parsing directly
+      serviceAccount = JSON.parse(serviceAccountVar);
+    } catch (e) {
+      // If direct parsing fails, handle potentially escaped JSON from environment variables
+      // (common in some CI/CD and dotenv setups)
+      if (serviceAccountVar.includes('\\"')) {
+        const jsonString = serviceAccountVar.replace(/\\"/g, '"').replace(/\n/g, '\\n');
+        serviceAccount = JSON.parse(jsonString);
+      } else {
+        throw e;
+      }
+    }
     
     // Ensure the private key is formatted correctly for environment variables
     if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {

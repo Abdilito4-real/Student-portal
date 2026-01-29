@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
 import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -9,8 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, Loader2, ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, ArrowLeft, Edit, Trash2, BookOpen, CreditCard, Upload } from 'lucide-react';
 import type { Student, Class, FeeRecord } from '@/lib/types';
+import { ResultDialog } from './result-dialog';
+import { FeeDialog } from './fee-dialog';
+import { parseResultsExcel } from '@/lib/excel-utils';
 import {
   Dialog,
   DialogContent,
@@ -267,7 +270,10 @@ export default function StudentManagement({ classId }: { classId: string }) {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isStudentFormOpen, setStudentFormOpen] = useState(false);
+  const [isResultDialogOpen, setIsResultDialogOpen] = useState(false);
+  const [isFeeDialogOpen, setIsFeeDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   const studentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -290,6 +296,49 @@ export default function StudentManagement({ classId }: { classId: string }) {
     [students, filter]
   );
   
+  const handleBulkUpload = async (file: File) => {
+    setIsBulkUploading(true);
+    try {
+      const rawResults = await parseResultsExcel(file);
+
+      // Map email to student ID
+      const studentsByEmail = new Map(students?.map(s => [s.email.toLowerCase(), s.id]));
+
+      const batch = writeBatch(firestore);
+      let count = 0;
+      for (const res of rawResults) {
+        const studentId = studentsByEmail.get(res.email.toLowerCase());
+        if (studentId) {
+          const newDocRef = doc(collection(firestore, 'academicResults'));
+          batch.set(newDocRef, {
+            studentId,
+            className: res.subject,
+            term: res.term,
+            year: res.year,
+            grade: res.grade,
+            comments: res.comments,
+            createdAt: serverTimestamp(),
+          });
+          count++;
+        }
+      }
+      await batch.commit();
+
+      toast({
+        title: 'Bulk Upload Complete',
+        description: `Successfully uploaded ${count} results.`
+      });
+    } catch (e: any) {
+      toast({
+        title: 'Upload Failed',
+        description: e.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsBulkUploading(false);
+    }
+  };
+
   const performDeleteStudent = async () => {
     if (!studentToDelete) return;
     setIsDeleting(true);
@@ -311,6 +360,21 @@ export default function StudentManagement({ classId }: { classId: string }) {
         <Button asChild variant="outline"><Link href="/admin/classes"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
         <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <Input placeholder="Filter..." value={filter} onChange={e => setFilter(e.target.value)} className="w-40 sm:w-64" />
+          <input
+            type="file"
+            id="bulk-upload"
+            className="hidden"
+            accept=".xlsx, .xls"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleBulkUpload(file);
+              e.target.value = ''; // Reset
+            }}
+          />
+          <Button variant="outline" onClick={() => document.getElementById('bulk-upload')?.click()} disabled={isBulkUploading}>
+            {isBulkUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Bulk Upload Results
+          </Button>
           <Button onClick={() => { setSelectedStudent(null); setStudentFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" />Create Student</Button>
         </div>
       </div>
@@ -332,6 +396,8 @@ export default function StudentManagement({ classId }: { classId: string }) {
                             <TableCell>{student.firstName} {student.lastName}</TableCell>
                             <TableCell><Badge variant={badgeVariant}>{feeStatus || 'N/A'}</Badge></TableCell>
                             <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setIsResultDialogOpen(true); }}><BookOpen className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setIsFeeDialogOpen(true); }}><CreditCard className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="icon" onClick={() => { setSelectedStudent(student); setStudentFormOpen(true); }}><Edit className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="icon" onClick={() => setStudentToDelete(student)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                             </TableCell>
@@ -346,6 +412,14 @@ export default function StudentManagement({ classId }: { classId: string }) {
 
       <Dialog open={isStudentFormOpen} onOpenChange={setStudentFormOpen}>
         <DialogContent>{isStudentFormOpen && <StudentForm setOpen={setStudentFormOpen} student={selectedStudent || undefined} preselectedClassId={classId} />}</DialogContent>
+      </Dialog>
+
+      <Dialog open={isResultDialogOpen} onOpenChange={setIsResultDialogOpen}>
+        <DialogContent className="max-w-2xl">{selectedStudent && <ResultDialog student={selectedStudent} />}</DialogContent>
+      </Dialog>
+
+      <Dialog open={isFeeDialogOpen} onOpenChange={setIsFeeDialogOpen}>
+        <DialogContent className="max-w-2xl">{selectedStudent && <FeeDialog student={selectedStudent} />}</DialogContent>
       </Dialog>
       
       <AlertDialog open={!!studentToDelete} onOpenChange={(open) => !open && setStudentToDelete(null)}>
