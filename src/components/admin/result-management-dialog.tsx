@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileSpreadsheet, Trash2, Plus, Info, AlertCircle } from 'lucide-react';
+import { Loader2, FileSpreadsheet, Trash2, Plus, Info, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { Student, AcademicResult, Class } from '@/lib/types';
@@ -35,6 +35,37 @@ export default function ResultManagementDialog({ student, onClose }: { student: 
         comments: '',
         position: '',
     });
+
+    const downloadTemplate = () => {
+        const templateData = [
+            {
+                Subject: 'Mathematics',
+                Grade: 'A',
+                Term: '1st',
+                Year: 2024,
+                Position: '1st',
+                Comments: 'Excellent performance'
+            },
+            {
+                Subject: 'English',
+                Grade: 'B',
+                Term: '1st',
+                Year: 2024,
+                Position: '3rd',
+                Comments: 'Good, but can improve'
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "ResultsTemplate");
+        XLSX.writeFile(wb, `${student.firstName}_${student.lastName}_Results_Template.xlsx`);
+        
+        toast({
+            title: "Template Downloaded",
+            description: "Fill the Excel file and upload it to bulk add results."
+        });
+    };
 
     async function handleAddResult() {
         if (!newResult.className) return toast({ title: 'Select a subject', variant: 'destructive' });
@@ -118,7 +149,7 @@ export default function ResultManagementDialog({ student, onClose }: { student: 
             <Alert className="bg-primary/5 border-primary/20">
                 <Info className="h-4 w-4" />
                 <AlertTitle>Bulk Upload Requirements</AlertTitle>
-                <AlertDescription className="space-y-2">
+                <AlertDescription className="space-y-4">
                     <p>Excel file must contain these exact column headers:</p>
                     <div className="grid grid-cols-2 gap-2 text-xs font-mono font-bold text-primary">
                         <span>Subject</span>
@@ -128,6 +159,9 @@ export default function ResultManagementDialog({ student, onClose }: { student: 
                         <span>Position (Optional)</span>
                         <span>Comments (Optional)</span>
                     </div>
+                    <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full mt-2">
+                        <Download className="mr-2 h-4 w-4" /> Download Student Result Template
+                    </Button>
                 </AlertDescription>
             </Alert>
 
