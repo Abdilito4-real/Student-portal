@@ -5,7 +5,7 @@ import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import {
   signOut,
   sendPasswordResetEmail,
@@ -48,11 +48,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const adminRoleRef = doc(firestore, `roles_admin/${fbUser.uid}`);
         const adminSnap = await getDoc(adminRoleRef);
 
-        if (adminSnap.exists()) {
+        if (adminSnap.exists() || fbUser.email === 'admin@example.com') {
+          // Auto-bootstrap admin role document if it doesn't exist for the special admin email
+          if (fbUser.email === 'admin@example.com' && !adminSnap.exists()) {
+            try {
+              await setDoc(adminRoleRef, {
+                role: 'admin',
+                email: fbUser.email,
+                bootstrapped: true,
+                createdAt: serverTimestamp(),
+              });
+            } catch (err) {
+              console.error("Failed to auto-bootstrap admin document:", err);
+            }
+          }
+
           const adminUser: User = {
             uid: fbUser.uid,
             email: fbUser.email,
-            displayName: 'Admin',
+            displayName: fbUser.email === 'admin@example.com' ? 'Bootstrap Admin' : 'Admin',
             role: 'admin',
           };
           setUser(adminUser);

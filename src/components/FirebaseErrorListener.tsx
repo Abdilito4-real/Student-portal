@@ -31,7 +31,9 @@ export function FirebaseErrorListener() {
 
   // On re-render, if an error exists in state, throw it.
   if (error) {
-    throw error;
+    // We log the error but don't throw to avoid crashing the whole application.
+    // In a real app, you might show a persistent notification or redirect.
+    console.error('Captured Firestore Permission Error:', error);
   }
 
   // This component renders nothing.
