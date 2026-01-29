@@ -10,10 +10,10 @@ const initializeAdminApp = () => {
     return admin.apps[0];
   }
 
-  const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (!serviceAccountVar) {
-    console.error('Firebase Admin SDK Error: FIREBASE_SERVICE_ACCOUNT_JSON environment variable not found.');
+    console.error('Firebase Admin SDK Error: FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_KEY environment variable not found.');
     return null;
   }
 
@@ -21,7 +21,7 @@ const initializeAdminApp = () => {
     const serviceAccount = JSON.parse(serviceAccountVar);
     
     // Ensure the private key is formatted correctly for environment variables
-    if (serviceAccount.private_key) {
+    if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
 
