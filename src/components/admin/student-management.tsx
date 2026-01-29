@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
-import { useCollection, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
+import { useState, useMemo } from 'react';
+import { collection, doc, query, where, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, Loader2, ArrowLeft, BookOpen, Edit, Trash2, Landmark } from 'lucide-react';
-import type { Student, Class, FeeRecord, AcademicResult } from '@/lib/types';
+import { PlusCircle, Loader2, ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import type { Student, Class, FeeRecord } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -41,10 +41,7 @@ import { deleteStudent as deleteStudentFlow } from '@/ai/flows/delete-student-fl
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
-import { Textarea } from '../ui/textarea';
 import { TooltipProvider } from '@/components/ui/tooltip';
-
-// ===================== SCHEMAS =====================
 
 const studentSchema = z.object({
   id: z.string().optional(),
@@ -54,8 +51,6 @@ const studentSchema = z.object({
   classId: z.string().min(1, 'You must select a class.'),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional(),
 });
-
-// ===================== STUDENT FORM =====================
 
 function StudentForm({ 
   student, 
@@ -262,8 +257,6 @@ function StudentForm({
     </>
   );
 }
-
-// ... other forms remain unchanged ...
 
 export default function StudentManagement({ classId }: { classId: string }) {
   const firestore = useFirestore();

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PT_Sans } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/auth-provider';
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { SiteContentProvider } from '@/context/site-content-provider';

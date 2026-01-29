@@ -3,24 +3,21 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore';
 
 /**
  * Initializes and returns the Firebase SDK instances.
- * This is designed to be called once, typically at the module level or root of the app.
  */
 export function initializeFirebase() {
-  // If we already have an app initialized, just return the SDKs for it.
   if (getApps().length) {
-    return getSdks(getApp());
+    const existingApp = getApp();
+    return getSdks(existingApp);
   }
 
-  // Fallback check: if config is missing (should not happen with hardcoding), 
-  // we attempt to provide a useful error.
-  if (!firebaseConfig.apiKey) {
-    throw new Error(
-      'Firebase configuration is missing. Ensure src/firebase/config.ts contains valid credentials.'
-    );
+  // Validate that we have at least an API key before initializing
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
+    console.error('Firebase configuration is invalid or missing.');
+    // Return dummy instances or handle as appropriate for your error boundary
   }
 
   const firebaseApp = initializeApp(firebaseConfig);
@@ -38,8 +35,6 @@ export function getSdks(firebaseApp: FirebaseApp) {
   };
 }
 
-// Initialize at module level for client-side consumption.
-// Note: In Next.js SSR, this may run on the server, so we handle it idempotently.
 const { firebaseApp, auth, firestore } = initializeFirebase();
 
 export { firebaseApp, auth, firestore };
