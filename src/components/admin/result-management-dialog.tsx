@@ -63,7 +63,7 @@ export default function ResultManagementDialog({ student, onClose }: { student: 
         
         toast({
             title: "Template Downloaded",
-            description: "Fill the Excel file and upload it to bulk add results."
+            description: "Fill the Excel file and upload it to bulk add results for this student."
         });
     };
 
@@ -148,19 +148,17 @@ export default function ResultManagementDialog({ student, onClose }: { student: 
 
             <Alert className="bg-primary/5 border-primary/20">
                 <Info className="h-4 w-4" />
-                <AlertTitle>Bulk Upload Requirements</AlertTitle>
+                <AlertTitle>Bulk Upload Instructions</AlertTitle>
                 <AlertDescription className="space-y-4">
-                    <p>Excel file must contain these exact column headers:</p>
-                    <div className="grid grid-cols-2 gap-2 text-xs font-mono font-bold text-primary">
-                        <span>Subject</span>
-                        <span>Grade (A-F)</span>
-                        <span>Term (1st, 2nd, 3rd)</span>
-                        <span>Year (e.g., 2024)</span>
-                        <span>Position (Optional)</span>
-                        <span>Comments (Optional)</span>
+                    <p>To upload multiple results, ensure your Excel file contains these exact headers. Note that <strong>Term</strong> must be one of: 1st, 2nd, 3rd.</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono font-bold text-primary">
+                        <Badge variant="outline">Subject</Badge>
+                        <Badge variant="outline">Grade (A-F)</Badge>
+                        <Badge variant="outline">Term (1st/2nd/3rd)</Badge>
+                        <Badge variant="outline">Year (e.g. 2024)</Badge>
                     </div>
                     <Button variant="outline" size="sm" onClick={downloadTemplate} className="w-full mt-2">
-                        <Download className="mr-2 h-4 w-4" /> Download Student Result Template
+                        <Download className="mr-2 h-4 w-4" /> Download Result Template (.xlsx)
                     </Button>
                 </AlertDescription>
             </Alert>

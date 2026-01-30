@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, Loader2, ArrowLeft, Edit, Trash2, BookOpen, CreditCard } from 'lucide-react';
+import { PlusCircle, Loader2, ArrowLeft, Edit, Trash2, BookOpen, CreditCard, Download, FileSpreadsheet } from 'lucide-react';
 import type { Student, FeeRecord } from '@/lib/types';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
@@ -29,6 +29,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/comp
 import StudentForm from './student-form';
 import FeeManagementDialog from './fee-management-dialog';
 import ResultManagementDialog from './result-management-dialog';
+import * as XLSX from 'xlsx';
 
 export default function StudentManagement({ classId }: { classId: string }) {
   const firestore = useFirestore();
@@ -67,6 +68,32 @@ export default function StudentManagement({ classId }: { classId: string }) {
     students?.filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(filter.toLowerCase())) ?? [], 
     [students, filter]
   );
+
+  const downloadClassListTemplate = () => {
+    if (!students || students.length === 0) return;
+    
+    const templateData = students.map(s => ({
+        'Student ID': s.id,
+        'First Name': s.firstName,
+        'Last Name': s.lastName,
+        'Subject': '',
+        'Grade (A-F)': '',
+        'Term (1st, 2nd, 3rd)': '1st',
+        'Year': new Date().getFullYear(),
+        'Position': '',
+        'Comments': ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ClassResults");
+    XLSX.writeFile(wb, `Class_List_Results_Template.xlsx`);
+    
+    toast({
+        title: "Template Downloaded",
+        description: "Fill this sheet to upload results for all students in this class."
+    });
+  };
   
   const performDeleteStudent = async () => {
     if (!studentToDelete) return;
@@ -86,7 +113,12 @@ export default function StudentManagement({ classId }: { classId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center gap-4 flex-wrap">
-        <Button asChild variant="outline"><Link href="/admin/classes"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
+        <div className="flex gap-2">
+            <Button asChild variant="outline"><Link href="/admin/classes"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button>
+            <Button variant="outline" onClick={downloadClassListTemplate} disabled={isLoadingStudents || filteredStudents.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Download Class Template
+            </Button>
+        </div>
         <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
           <Input placeholder="Search students..." value={filter} onChange={e => setFilter(e.target.value)} className="w-40 sm:w-64" />
           <Button onClick={() => { setSelectedStudent(null); setStudentFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" />Create Student</Button>
